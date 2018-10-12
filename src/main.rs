@@ -104,8 +104,8 @@ fn create_world() -> Box<dyn Object> {
     for i in -100..=100 {
         for j in -100..=100 {
             for k in -100..=100 {
-                let obj = Sphere::new(vec3(i as f64, j as f64, k as f64), 0.05);
-                let c = vec3(i as f64, j as f64, k as f64);
+                let obj = Sphere::new(vec3(i as f32, j as f32, k as f32), 0.05);
+                let c = vec3(i as f32, j as f32, k as f32);
                 //let obj = Cuboid::new(c - 0.1, c + 0.1);
                 //objs.push(Box::new(obj));
                 //objs.push(obj);
@@ -121,8 +121,8 @@ fn create_world() -> Box<dyn Object> {
         let radius = 50.0;
         let center = vec3(0.0, -50.0, 0.0)*0.0;
 
-        let phi = (i as f64) / (n as f64) * std::f64::consts::PI;
-        let rho = (j as f64 - i as f64*0.5) / (m as f64) * 2.0 * std::f64::consts::PI;
+        let phi = (i as f32) / (n as f32) * std::f32::consts::PI;
+        let rho = (j as f32 - i as f32*0.5) / (m as f32) * 2.0 * std::f32::consts::PI;
 
         let x = rho.cos() * phi.sin();
         let y = rho.sin() * phi.sin();
@@ -165,7 +165,7 @@ fn main() {
         //.look_at(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, -1.0))
         .position(vec3(200.0, 0.0, 100.0))
         .look_at(vec3(0.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0))
-        .perspective(100.0, width as f64, height as f64);
+        .perspective(100.0, width as f32, height as f32);
 
     let world = create_world();
     let light = vec3(0.0, 0.0, 1.0).normalize();
@@ -187,8 +187,8 @@ fn main() {
 
                 for a in 0..subsampling {
                     for b in 0..subsampling {
-                        let x = (i as f64) + (a as f64 / subsampling as f64);
-                        let y = (j as f64) + (b as f64 / subsampling as f64);
+                        let x = (i as f32) + (a as f32 / subsampling as f32);
+                        let y = (j as f32) + (b as f32 / subsampling as f32);
                         let ray = cam.ray_at(x, y);
 
                         let max_t = 10000.0;
@@ -217,7 +217,7 @@ fn main() {
                     }
                 }
 
-                pixel *= 256.0 / (subsampling * subsampling) as f64;
+                pixel *= 256.0 / (subsampling * subsampling) as f32;
                 pixel = pixel.max(Vec3::fill(0.0));
                 pixel = pixel.min(Vec3::fill(255.0));
 

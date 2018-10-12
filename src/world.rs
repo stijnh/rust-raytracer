@@ -11,7 +11,7 @@ impl Ray {
         Ray { pos, dir: dir.normalize() }
     }
 
-    pub fn at(&self, t: f64) -> Vec3 {
+    pub fn at(&self, t: f32) -> Vec3 {
         self.pos + self.dir * t
     }
 }
@@ -22,8 +22,8 @@ pub struct Camera {
     dir: Vec3,
     horizontal: Vec3,
     vertical: Vec3,
-    width: f64,
-    height: f64,
+    width: f32,
+    height: f32,
 }
 
 impl Camera {
@@ -58,7 +58,7 @@ impl Camera {
         self.look_towards(lookat - self.pos, up)
     }
 
-    pub fn perspective(mut self, fov: f64, width: f64, height: f64) -> Self {
+    pub fn perspective(mut self, fov: f32, width: f32, height: f32) -> Self {
         let fac = (fov / 2.0).to_radians().tan();
 
         self.width = width;
@@ -68,7 +68,7 @@ impl Camera {
         self
     }
 
-    pub fn ray_at(&self, x: f64, y: f64) -> Ray {
+    pub fn ray_at(&self, x: f32, y: f32) -> Ray {
         let u = 2.0 * (x / self.width) - 1.0;
         let v = 2.0 * (y / self.height) - 1.0;
 

@@ -19,29 +19,29 @@ impl AABB {
 }
 
 pub struct HitResult {
-    pub t: f64,
+    pub t: f32,
     pub normal: Vec3
 }
 
 pub trait Object: Sync + Send {
-    fn hit(&self, ray: &Ray, min_t: f64, max_t: f64) -> Option<HitResult>;
+    fn hit(&self, ray: &Ray, min_t: f32, max_t: f32) -> Option<HitResult>;
     fn bounding_box(&self) -> AABB;
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct Sphere {
     pos: Vec3,
-    radius: f64,
+    radius: f32,
 }
 
 impl Sphere {
-    pub fn new(pos: Vec3, radius: f64) -> Self {
+    pub fn new(pos: Vec3, radius: f32) -> Self {
         Sphere { pos, radius }
     }
 }
 
 impl Object for Sphere {
-    fn hit(&self, ray: &Ray, min_t: f64, max_t: f64) -> Option<HitResult> {
+    fn hit(&self, ray: &Ray, min_t: f32, max_t: f32) -> Option<HitResult> {
 
         let offset = ray.pos - self.pos; // o - c
         let a = -ray.dir.dot(offset);    // -(l . (o - c))
@@ -90,7 +90,7 @@ impl Cuboid {
 }
 
 impl Object for Cuboid {
-    fn hit(&self, ray: &Ray, mut t_min: f64, mut t_max: f64) -> Option<HitResult> {
+    fn hit(&self, ray: &Ray, mut t_min: f32, mut t_max: f32) -> Option<HitResult> {
         for i in 0..3 {
             if ray.dir[i].abs() > 0.001 {
                 let mut tx_min = (self.min[i] - ray.pos[i]) / ray.dir[i];
@@ -126,7 +126,7 @@ impl <T> ObjectList<T> {
 }
 
 impl <T> Object for ObjectList<T> where T: Object {
-    fn hit(&self, ray: &Ray, t_min: f64, mut t_max: f64) -> Option<HitResult> {
+    fn hit(&self, ray: &Ray, t_min: f32, mut t_max: f32) -> Option<HitResult> {
         let mut result = None;
 
         for obj in self.0.iter() {
@@ -161,7 +161,7 @@ impl <T: Object> BoundingBox<T> {
 }
 
 impl <T: Object> Object for BoundingBox<T> {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitResult> {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let b = &self.1;
         let tx0 = (b.min.x - ray.pos.x) / ray.dir.x;
         let tx1 = (b.max.x - ray.pos.x) / ray.dir.x;
@@ -188,7 +188,7 @@ impl <T: Object> Object for BoundingBox<T> {
 }
 
 impl <T: Object + ?Sized> Object for Box<T> {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitResult> {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         self.deref().hit(ray, t_min, t_max)
     }
 
@@ -205,7 +205,7 @@ pub struct Triangle {
 }
 
 impl Object for Triangle {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitResult> {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let v = self.a;
         let e1 = self.b - self.a;
         let e2 = self.c - self.a;
@@ -257,7 +257,7 @@ impl FastTriangle {
 }
 
 impl Object for FastTriangle {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitResult> {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let O = ray.pos;
         let D = ray.dir;
         let V = self.a;
@@ -293,20 +293,22 @@ impl Object for FastTriangle {
 }
 
 
+
+
 /*
 enum ObjectTree<T> {
     Leaf(Vec<T>),
     Split {
         axis: u8,
         lower: Box<ObjectTree<T>>,
-        lower_max: f64,
+        lower_max: f32,
         upper: Box<ObjectTree<T>>,
-        upper_min: f64,
+        upper_min: f32,
     }
 }
 
 impl <T> Object for ObjectTree<T> {
-    fn hit(&self, ray: &Ray, mut t_min: f64, mut t_max: f64) -> Option<f64> {
+    fn hit(&self, ray: &Ray, mut t_min: f32, mut t_max: f32) -> Option<f32> {
         match self {
             Leaf(list) => list.hit(ray, t_min, t_max),
             node @ Split{ .. } => {

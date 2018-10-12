@@ -3,28 +3,28 @@ use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign, I
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Neg, Add, Sub, AddAssign, SubAssign)]
 pub struct Vec3 {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
-pub fn vec3(x: f64, y: f64, z: f64) -> Vec3 {
+pub fn vec3(x: f32, y: f32, z: f32) -> Vec3 {
     Vec3::new(x, y, z)
 }
 
 impl Vec3 {
-    pub fn new(x:f64, y:f64, z:f64) -> Vec3 {
+    pub fn new(x:f32, y:f32, z:f32) -> Vec3 {
         Vec3 {x, y, z}
     }
 
     #[inline(always)]
-    pub fn fill(v: f64) -> Vec3 {
+    pub fn fill(v: f32) -> Vec3 {
         Self::new(v, v, v)
     }
 
     #[inline(always)]
     pub fn nan() -> Self {
-        Self::fill(::std::f64::NAN)
+        Self::fill(::std::f32::NAN)
     }
 
     #[inline(always)]
@@ -38,17 +38,17 @@ impl Vec3 {
     }
 
     #[inline(always)]
-    pub fn length(&self) -> f64 {
+    pub fn length(&self) -> f32 {
         self.length_sqr().sqrt()
     }
 
     #[inline(always)]
-    pub fn length_sqr(&self) -> f64 {
+    pub fn length_sqr(&self) -> f32 {
         self.dot(*self)
     }
 
     #[inline(always)]
-    pub fn dot(&self, that: Self) -> f64 {
+    pub fn dot(&self, that: Self) -> f32 {
         (*self * that).sum()
     }
 
@@ -76,7 +76,7 @@ impl Vec3 {
     }
 
     #[inline(always)]
-    pub fn angle_to(self, that: Self) -> f64 {
+    pub fn angle_to(self, that: Self) -> f32 {
         match (self.normalize_safe(), that.normalize_safe()) {
             (Some(a), Some(b)) => {
                 a.dot(b).acos()
@@ -101,14 +101,14 @@ impl Vec3 {
     }
 
     #[inline(always)]
-    pub fn sum(&self) -> f64 {
+    pub fn sum(&self) -> f32 {
         self.x + self.y  + self.z
     }
 
     #[inline(always)]
-    pub fn as_slice(&self) -> &[f64; 3] {
+    pub fn as_slice(&self) -> &[f32; 3] {
         unsafe {
-            (&self.x as *const f64 as *const [f64; 3]).as_ref().unwrap()
+            (&self.x as *const f32 as *const [f32; 3]).as_ref().unwrap()
         }
     }
 
@@ -129,19 +129,19 @@ impl fmt::Display for Vec3 {
     }
 }
 
-impl From<(f64, f64, f64)> for Vec3 {
-    fn from(v: (f64, f64, f64)) -> Self {
+impl From<(f32, f32, f32)> for Vec3 {
+    fn from(v: (f32, f32, f32)) -> Self {
         Vec3::new(v.0, v.1, v.2)
     }
 }
 
-impl From<[f64; 3]> for Vec3 {
-    fn from(v: [f64; 3]) -> Self {
+impl From<[f32; 3]> for Vec3 {
+    fn from(v: [f32; 3]) -> Self {
         Vec3::new(v[0], v[1], v[2])
     }
 }
 
-impl Add<Vec3> for f64 {
+impl Add<Vec3> for f32 {
     type Output = Vec3;
 
     fn add(self, rhs: Vec3) -> Vec3 {
@@ -149,15 +149,15 @@ impl Add<Vec3> for f64 {
     }
 }
 
-impl Add<f64> for Vec3 {
+impl Add<f32> for Vec3 {
     type Output = Vec3;
 
-    fn add(self, rhs: f64) -> Vec3 {
+    fn add(self, rhs: f32) -> Vec3 {
         self + Vec3::fill(rhs)
     }
 }
 
-impl Sub<Vec3> for f64 {
+impl Sub<Vec3> for f32 {
     type Output = Vec3;
 
     fn sub(self, rhs: Vec3) -> Vec3 {
@@ -165,10 +165,10 @@ impl Sub<Vec3> for f64 {
     }
 }
 
-impl Sub<f64> for Vec3 {
+impl Sub<f32> for Vec3 {
     type Output = Vec3;
 
-    fn sub(self, rhs: f64) -> Vec3 {
+    fn sub(self, rhs: f32) -> Vec3 {
         self - Vec3::fill(rhs)
     }
 }
@@ -181,15 +181,15 @@ impl Mul<Vec3> for Vec3 {
     }
 }
 
-impl Mul<f64> for Vec3 {
+impl Mul<f32> for Vec3 {
     type Output = Vec3;
 
-    fn mul(self, rhs: f64) -> Vec3 {
+    fn mul(self, rhs: f32) -> Vec3 {
         self * Vec3::fill(rhs)
     }
 }
 
-impl Mul<Vec3> for f64 {
+impl Mul<Vec3> for f32 {
     type Output = Vec3;
 
     fn mul(self, rhs: Vec3) -> Vec3 {
@@ -197,14 +197,14 @@ impl Mul<Vec3> for f64 {
     }
 }
 
-impl AddAssign<f64> for Vec3 {
-    fn add_assign(&mut self, rhs: f64) {
+impl AddAssign<f32> for Vec3 {
+    fn add_assign(&mut self, rhs: f32) {
         *self = *self + rhs;
     }
 }
 
-impl SubAssign<f64> for Vec3 {
-    fn sub_assign(&mut self, rhs: f64) {
+impl SubAssign<f32> for Vec3 {
+    fn sub_assign(&mut self, rhs: f32) {
         *self = *self - rhs;
     }
 }
@@ -215,8 +215,8 @@ impl MulAssign<Vec3> for Vec3 {
     }
 }
 
-impl MulAssign<f64> for Vec3 {
-    fn mul_assign(&mut self, rhs: f64) {
+impl MulAssign<f32> for Vec3 {
+    fn mul_assign(&mut self, rhs: f32) {
         *self *= Vec3::fill(rhs);
     }
 }
@@ -229,22 +229,22 @@ impl Div<Vec3> for Vec3 {
     }
 }
 
-impl Div<f64> for Vec3 {
+impl Div<f32> for Vec3 {
     type Output = Vec3;
 
-    fn div(self, rhs: f64) -> Vec3 {
+    fn div(self, rhs: f32) -> Vec3 {
         self / Vec3::fill(rhs)
     }
 }
 
-impl DivAssign<f64> for Vec3 {
-    fn div_assign(&mut self, rhs: f64) {
+impl DivAssign<f32> for Vec3 {
+    fn div_assign(&mut self, rhs: f32) {
         *self = *self / rhs;
     }
 }
 
 impl Index<usize> for Vec3 {
-    type Output = f64;
+    type Output = f32;
 
     #[inline(always)]
     fn index(&self, index: usize) -> &Self::Output {
