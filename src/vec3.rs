@@ -1,5 +1,5 @@
 use std::fmt;
-use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
+use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign, Index, IndexMut};
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Neg, Add, Sub, AddAssign, SubAssign)]
 pub struct Vec3 {
@@ -17,30 +17,42 @@ impl Vec3 {
         Vec3 {x, y, z}
     }
 
+    #[inline(always)]
     pub fn fill(v: f64) -> Vec3 {
         Self::new(v, v, v)
     }
 
+    #[inline(always)]
     pub fn nan() -> Self {
         Self::fill(::std::f64::NAN)
     }
 
+    #[inline(always)]
     pub fn zero() -> Vec3 {
         Self::fill(0.0)
     }
 
+    #[inline(always)]
     pub fn is_nan(&self) -> bool {
         self.x.is_nan() || self.y.is_nan() || self.z.is_nan()
     }
 
+    #[inline(always)]
     pub fn length(&self) -> f64 {
-        self.dot(*self).sqrt()
+        self.length_sqr().sqrt()
     }
 
+    #[inline(always)]
+    pub fn length_sqr(&self) -> f64 {
+        self.dot(*self)
+    }
+
+    #[inline(always)]
     pub fn dot(&self, that: Self) -> f64 {
         (*self * that).sum()
     }
 
+    #[inline(always)]
     pub fn cross(&self, that: Self) -> Self {
         Vec3::new(
             self.y * that.z - self.z * that.y,
@@ -48,6 +60,7 @@ impl Vec3 {
             self.x * that.y - self.y * that.x)
     }
 
+    #[inline(always)]
     pub fn normalize_safe(&self) -> Option<Self> {
         let v = self.normalize();
         if !v.is_nan() {
@@ -57,10 +70,12 @@ impl Vec3 {
         }
     }
 
+    #[inline(always)]
     pub fn normalize(&self) -> Self {
         *self / self.length()
     }
 
+    #[inline(always)]
     pub fn angle_to(self, that: Self) -> f64 {
         match (self.normalize_safe(), that.normalize_safe()) {
             (Some(a), Some(b)) => {
@@ -70,32 +85,39 @@ impl Vec3 {
         }
     }
 
+    #[inline(always)]
     pub fn unit_x() -> Vec3 {
         Vec3::new(1.0, 0.0, 0.0)
     }
 
+    #[inline(always)]
     pub fn unit_y() -> Vec3 {
         Vec3::new(0.0, 1.0, 0.0)
     }
+    #[inline(always)]
 
     pub fn unit_z() -> Vec3 {
         Vec3::new(0.0, 0.0, 1.0)
     }
 
+    #[inline(always)]
     pub fn sum(&self) -> f64 {
         self.x + self.y  + self.z
     }
 
+    #[inline(always)]
     pub fn as_slice(&self) -> &[f64; 3] {
         unsafe {
             (&self.x as *const f64 as *const [f64; 3]).as_ref().unwrap()
         }
     }
 
+    #[inline(always)]
     pub fn min(&self, that: Self) -> Self {
         Self::new(self.x.min(that.x), self.y.min(that.y), self.z.min(that.z))
     }
 
+    #[inline(always)]
     pub fn max(&self, that: Self) -> Self {
         Self::new(self.x.max(that.x), self.y.max(that.y), self.z.max(that.z))
     }
@@ -218,5 +240,31 @@ impl Div<f64> for Vec3 {
 impl DivAssign<f64> for Vec3 {
     fn div_assign(&mut self, rhs: f64) {
         *self = *self / rhs;
+    }
+}
+
+impl Index<usize> for Vec3 {
+    type Output = f64;
+
+    #[inline(always)]
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("index out of bounds, length is 3 and index is {}", index)
+        }
+    }
+}
+
+impl IndexMut<usize> for Vec3 {
+    #[inline(always)]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            _ => panic!("index out of bounds, length is 3 and index is {}", index)
+        }
     }
 }

@@ -1,9 +1,9 @@
 use vec3::Vec3;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-struct Ray {
-    pos: Vec3,
-    dir: Vec3,
+pub struct Ray {
+    pub pos: Vec3,
+    pub dir: Vec3,
 }
 
 impl Ray {
@@ -12,16 +12,18 @@ impl Ray {
     }
 
     pub fn at(&self, t: f64) -> Vec3 {
-        *self.pos + *self.dir * t
+        self.pos + self.dir * t
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-struct Camera {
+pub struct Camera {
     pos: Vec3,
     dir: Vec3,
     horizontal: Vec3,
-    vertical: Vec3
+    vertical: Vec3,
+    width: f64,
+    height: f64,
 }
 
 impl Camera {
@@ -31,34 +33,45 @@ impl Camera {
             dir: Vec3::unit_z(),
             horizontal: Vec3::unit_x(),
             vertical: Vec3::unit_y(),
+            width: 1.0,
+            height: 1.0,
         }
     }
 
-    pub fn position(self, pos: Vec3) -> Self {
+    pub fn position(mut self, pos: Vec3) -> Self {
         self.pos = pos;
         self
     }
 
-    pub fn look_towards(self, dir: Vec3, up: Vec3) -> Self {
+    pub fn look_towards(mut self, dir: Vec3, up: Vec3) -> Self {
         let dir = dir.normalize();
         let horz = up.cross(dir).normalize();
         let vert = dir.cross(horz).normalize();
 
         self.dir = dir;
-        self.horizontal = horz * self.horziontal.length();
+        self.horizontal = horz * self.horizontal.length();
         self.vertical = vert * self.vertical.length();
         self
     }
 
     pub fn look_at(self, lookat: Vec3, up: Vec3) -> Self {
-        self.look_towards(self.pos - lookat, up)
+        self.look_towards(lookat - self.pos, up)
     }
 
-    pub fn perspective(self, fov: f64, near: f64, width: f64, height: f64) -> Self {
-        d
+    pub fn perspective(mut self, fov: f64, width: f64, height: f64) -> Self {
+        let fac = (fov / 2.0).to_radians().tan();
+
+        self.width = width;
+        self.height = height;
+        self.horizontal *= fac / self.horizontal.length();
+        self.vertical *= fac / self.vertical.length() * (height / width);
+        self
     }
 
-    pub fn ray_at(&self, u: f64, v: f64) -> Ray {
+    pub fn ray_at(&self, x: f64, y: f64) -> Ray {
+        let u = 2.0 * (x / self.width) - 1.0;
+        let v = 2.0 * (y / self.height) - 1.0;
+
         Ray::new(self.pos, self.dir + u * self.horizontal + v * self.vertical)
     }
 }
