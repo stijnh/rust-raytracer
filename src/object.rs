@@ -16,6 +16,32 @@ impl AABB {
             max: a.max(b),
         }
     }
+
+    #[inline(always)]
+    pub fn intersect_ray(&self, ray: &Ray) -> Option<(f32, f32)> {
+        let tx0 = (self.min.x - ray.pos.x) / ray.dir.x;
+        let tx1 = (self.max.x - ray.pos.x) / ray.dir.x;
+        let ty0 = (self.min.y - ray.pos.y) / ray.dir.y;
+        let ty1 = (self.max.y - ray.pos.y) / ray.dir.y;
+        let tz0 = (self.min.z - ray.pos.z) / ray.dir.z;
+        let tz1 = (self.max.z - ray.pos.z) / ray.dir.z;
+
+        let t0 = max!(min!(tx0, tx1), min!(ty0, ty1), min!(tz0, tz1));
+        let t1 = min!(max!(tx0, tx1), max!(ty0, ty1), max!(tz0, tz1));
+
+        if t0 < t1 {
+            Some((t0, t1))
+        } else {
+            None
+        }
+    }
+
+    pub fn union(&self, other: &Self) -> Self {
+        AABB::new(
+            self.min.min(other.min),
+            self.max.max(other.max))
+
+    }
 }
 
 pub struct HitResult {
@@ -140,14 +166,12 @@ impl <T> Object for ObjectList<T> where T: Object {
     }
 
     fn bounding_box(&self) -> AABB {
-        let mut result  = self.0[0].bounding_box();
-
-        for obj in self.0.iter() {
-            let bb = obj.bounding_box();
-            result = AABB::new(result.min.min(bb.min), result.max.max(bb.max));
-        }
-
-        result
+        self.0.iter()
+            .fold(None, |result, obj| {
+                let a = obj.bounding_box();
+                let b = result.unwrap_or(a);
+                Some(AABB::union(&a, &b))
+            }).unwrap()
     }
 }
 
@@ -162,24 +186,17 @@ impl <T: Object> BoundingBox<T> {
 
 impl <T: Object> Object for BoundingBox<T> {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
-        let b = &self.1;
-        let tx0 = (b.min.x - ray.pos.x) / ray.dir.x;
-        let tx1 = (b.max.x - ray.pos.x) / ray.dir.x;
-        let ty0 = (b.min.y - ray.pos.y) / ray.dir.y;
-        let ty1 = (b.max.y - ray.pos.y) / ray.dir.y;
-        let tz0 = (b.min.z - ray.pos.z) / ray.dir.z;
-        let tz1 = (b.max.z - ray.pos.z) / ray.dir.z;
+        if let Some((t_in, t_out)) = self.1.intersect_ray(ray) {
+            if t_in <= t_max && t_out >= t_min {
+                let t0 = max!(t_in, t_min);
+                let t1 = min!(t_out, t_max);
+                let dt = (t1 - t0) * 0.01;
 
-        let t0 = t_min.max(tx0.min(tx1)).max(ty0.min(ty1)).max(tz0.min(tz1));
-        let t1 = t_max.min(tx0.max(tx1)).min(ty0.max(ty1)).min(tz0.max(tz1));
-
-        if t0 < t1 {
-            let dt = (t1 - t0) * 0.01;
-
-            self.0.hit(ray, t0 - dt, t1 + dt)
-        } else {
-            None
+                return self.0.hit(ray, t0 - dt, t1 + dt);
+            }
         }
+
+        None
     }
 
     fn bounding_box(&self) -> AABB {
@@ -291,44 +308,4 @@ impl Object for FastTriangle {
         AABB::new(a.min(b).min(c), a.max(b).max(c))
     }
 }
-
-
-
-
-/*
-enum ObjectTree<T> {
-    Leaf(Vec<T>),
-    Split {
-        axis: u8,
-        lower: Box<ObjectTree<T>>,
-        lower_max: f32,
-        upper: Box<ObjectTree<T>>,
-        upper_min: f32,
-    }
-}
-
-impl <T> Object for ObjectTree<T> {
-    fn hit(&self, ray: &Ray, mut t_min: f32, mut t_max: f32) -> Option<f32> {
-        match self {
-            Leaf(list) => list.hit(ray, t_min, t_max),
-            node @ Split{ .. } => {
-
-
-            }
-        }
-    }
-
-    fn bounding_box(&self) -> AABB {
-        match self {
-            Leaf(list) => list.bounding_box(),
-            node @ Split{ .. } => {
-                let a = node.lower.bounding_box();
-                let b = node.upper.bounding_box();
-
-                AABB::new(a.min.min(b.min), b.max.max(b.max))
-            }
-        }
-    }
-}
-*/
 
