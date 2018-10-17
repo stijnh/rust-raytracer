@@ -12,6 +12,7 @@ mod vec3;
 mod world;
 mod object;
 mod loader;
+mod bvh;
 
 use rayon::prelude::*;
 
@@ -155,7 +156,7 @@ fn main() {
 
     type Pixel = image::Rgb<u8>;
 
-    let subsampling = 2u32;
+    let subsampling = 10u32;
     let width = 800u32;
     let height = 600u32;
     let mut img = image::ImageBuffer::<Pixel, _>::new(width, height);

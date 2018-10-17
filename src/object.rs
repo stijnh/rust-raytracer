@@ -143,11 +143,15 @@ impl Object for Cuboid {
     }
 }
 
-pub struct ObjectList<T>(Vec<T>);
+pub struct ObjectList<T>(Box<[T]>);
 
 impl <T> ObjectList<T> {
     pub fn new(objs: Vec<T>) -> Self {
-        ObjectList(objs)
+        ObjectList(objs.into_boxed_slice())
+    }
+
+    pub fn into_vec(self) -> Vec<T> {
+        self.0.into_vec()
     }
 }
 
