@@ -1,6 +1,78 @@
 use std::fmt;
 use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign, Index, IndexMut};
 
+#[derive(Copy, Clone, Debug, PartialEq, Neg, Add, Sub, AddAssign, SubAssign)]
+pub struct Mat3 {
+    pub x: Vec3,
+    pub y: Vec3,
+    pub z: Vec3,
+}
+
+impl Mat3 {
+    pub fn new(
+        xx: f32, xy: f32, xz: f32, 
+        yx: f32, yy: f32, yz: f32, 
+        zx: f32, zy: f32, zz: f32) -> Self {
+        Mat3::from_rows(
+            vec3(xx, xy, xz),
+            vec3(yx, yy, yz),
+            vec3(zx, zy, zz))
+    }
+
+    pub fn from_rows(x: Vec3, y: Vec3, z: Vec3) {
+        Mat3 { x, y, z }
+    }
+
+    pub fn to_rows(self) -> (Vec3, Vec3, Vec3) {
+        (self.x, self.y, self.z)
+    }
+
+    pub fn from_columns(a: Vec3, b: Vec3, c: Vec3) {
+        Self::from_rows(a, b, c).transpose()
+    }
+
+    pub fn to_columns(self) -> (Vec3, Vec3, Vec3) {
+        self.transpose().to_rows()
+    }
+
+    pub fn identity() -> Self {
+        Self::new(
+            Vec3::unit_x(),
+            Vec3::unit_y(),
+            Vec3::unit_z())
+    }
+
+    pub fn fill(v: f32) -> Mat3 {
+        let vec = Vec3::fill(v);
+        Self::from_rows(vec, vec, vec);
+    }
+
+    pub fn zeros() -> Self {
+        Self::fill(0.0)
+    }
+
+    pub fn transpose(self) -> Self {
+        Mat3::new(
+            self.x.x, self.y.x, self.z.x,
+            self.x.y, self.y.y, self.z.y,
+            self.x.z, self.y.z, self.z.z)
+    }
+
+    pub fn is_nan(&self) -> bool {
+        self.x.is_nan() || self.y.is_nan() || self.z.is_nan()
+    }
+
+    pub fn mult(&self, &other: &Self) -> Self {
+    }
+}
+
+impl fmt::Display for Mat3 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}, {}, {})", self.x, self.y, self.z)
+    }
+}
+
+
 #[derive(Copy, Clone, Default, Debug, PartialEq, Neg, Add, Sub, AddAssign, SubAssign)]
 pub struct Vec3 {
     pub x: f32,
@@ -45,11 +117,6 @@ impl Vec3 {
     #[inline(always)]
     pub fn length_sqr(&self) -> f32 {
         self.dot(*self)
-    }
-
-    #[inline(always)]
-    pub fn dot(&self, that: Self) -> f32 {
-        (*self * that).sum()
     }
 
     #[inline(always)]
@@ -266,5 +333,43 @@ impl IndexMut<usize> for Vec3 {
             2 => &mut self.z,
             _ => panic!("index out of bounds, length is 3 and index is {}", index)
         }
+    }
+}
+
+pub trait Dot<V> {
+    type Output;
+    fn dot(self, other: V) -> Self::Output;
+}
+
+impl Dot<Vec3> for Vec3 {
+    type Output = f32;
+
+    pub fn dot(self, other: Vec3) -> f32 {
+        (self * other).sum()
+    }
+}
+
+impl Dot<Vec3> for Mat3 {
+    type Output = Vec3;
+
+    pub fn dot(self, other: Vec3) -> Vec3 {
+        vec3(self.x.dot(other), self.y.dot(other), self.z.dot(other))
+    }
+}
+
+impl Dot<Mat3> for Vec3 {
+    type Output = Vec3;
+
+    pub fn dot(self, other: Mat3) -> Vec3 {
+        other.transpose().dot(self)
+    }
+}
+
+impl Dot<Mat3> for Mat3 {
+    type Mat3 = Mat3;
+
+    pub fn dot(self, other: Mat3) -> Mat3 {
+        let (x, y, z) = other.to_columns();
+        Self::from_columns(self.dot(x), self.dot(y), self.dot(z))
     }
 }

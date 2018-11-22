@@ -54,6 +54,100 @@ pub trait Object: Sync + Send {
     fn bounding_box(&self) -> AABB;
 }
 
+pub struct Transform<T> {
+    obj: T,
+    pos: Vec3,
+    rot: Mat3,
+}
+
+impl <T> Transform<T> {
+    pub fn new(obj: T) {
+        Transform {
+            obj,
+            pos: Vec3::zero(),
+            rotate: Mat3x3::identity(),
+        }
+    }
+
+    pub fn translate(self, p: Vec3) {
+        self.pos += p;
+    }
+
+    pub fn rotate(self, axis: Vec3, angle: f32) {
+        let u = axis.normalize();
+        let c = angle.cos();
+        let s = angle.sin();
+
+        let m = Mat3::new(
+            c + u.x * u.x * (1 - c),
+            u.x *  u.y * (1 - c) - u.z * s,
+            u.x * u.z * (1 - c) + u.y * s,
+
+            u.y * u.x * (1 - c) + u.z * s,
+            c + u.y * u.y * (1 - c),
+            u.y * u.z * (1 - c) - u.x * s,
+
+            u.z * u.x * (1 - c) - u.y,
+            u.z * u.y * (1 - c) + u.x * s,
+            c + u.z * u.z * (1 - c),
+        );
+
+        self.pos = m.mult(self.pos);
+        self.rot = m.mult(self.rot);
+        self.rot_inv = self.rot.clone().transpose();
+        self
+    }
+
+    pub fn rotate_x(self, angle: f32) {
+        self.rotate(Vec3::unit_x(), angle)
+    }
+
+    pub fn rotate_y(self, angle: f32) {
+        self.rotate(Vec3::unit_y(), angle)
+    }
+
+    pub fn rotate_z(self, angle: f32) {
+        self.rotate(Vec3::unit_z(), angle)
+    }
+}
+
+impl <T: Object> Object for Transform<T> {
+    fn hit(&self, ray: &Ray, min_t: f32, max_t: f32) -> Option<HitResult> {
+        let p = self.rot_inv.transform(ray.pos) - self.pos;
+        let d = self.rot_inv.transform(ray.dir);
+        let r = Ray::new(p, d);
+
+        match self.obj.hit(r, min_t, max_t) {
+            Some(result) => HitResult {
+                t: result.t,
+                normal: self.rot.transform(result.normal),
+            },
+            None => None
+        }
+    }
+
+    fn bounding_box(&self) -> AABB {
+        let mut min = Vec3::fill(f32::INFINITY);
+        let mut max = Vec3::fill(-f32::INFINITY);
+        let bbox = self.obj.bounding_box();
+
+        for i in 0..8 {
+            let p = Vec3::new(
+                iff!(i % 2 <= 0, min.x, min.x),
+                iff!(i % 4 <= 2, min.x, max.y),
+                iff!(i     <= 4, min.x, max.z),
+            );
+
+            let q = self.rot.mult(p) + self.pos;
+            min = min.min(p);
+            max = max.max(p);
+        }
+
+        AABB::new(min, max)
+    }
+}
+
+
 #[derive(Copy, Clone, Debug)]
 pub struct Sphere {
     pos: Vec3,

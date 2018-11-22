@@ -3,5 +3,15 @@ name = "raytracer"
 version = "0.1.0"
 authors = ["stijnh <mail@stijnh.nl>"]
 
+[profile.release]
+panic = "abort"
+
 [dependencies]
 derive_more="0.12.0"
+boolinator="2.4.0"
+image = "0.20.0"
+pbr = "1.0.1"
+rayon = "1.0.2"
+float-ord = "0.2.0"
+partition = "0.1.1"
+failure = "0.1.2"
