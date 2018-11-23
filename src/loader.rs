@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{BufReader, BufRead, Result as IoResult, Error as IoError};
 use object::Triangle;
-use vec3::{Vec3, vec3};
+use util::{Vec3D, vec3d};
 
 #[derive(Debug, Fail)]
 pub enum LoaderError {
@@ -12,7 +12,7 @@ pub enum LoaderError {
     ParseError(String),
 }
 
-pub fn load_obj(filename: &str) -> Result<Vec<(Vec3, Vec3, Vec3)>, LoaderError> {
+pub fn load_obj(filename: &str) -> Result<Vec<(Vec3D, Vec3D, Vec3D)>, LoaderError> {
     let mut vertices = vec![];
     let mut triangles = vec![];
 
@@ -42,7 +42,7 @@ pub fn load_obj(filename: &str) -> Result<Vec<(Vec3, Vec3, Vec3)>, LoaderError> 
                 let zs = iter.next().and_then(|p| p.parse().ok());
 
                 if let (Some(x), Some(y), Some(z)) = (xs, ys, zs) {
-                    vertices.push(vec3(x, y, z));
+                    vertices.push(vec3d(x, y, z));
                 } else {
                     return parse_error("failed to parse vertex".into(), lineno);
                 }

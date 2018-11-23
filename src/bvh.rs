@@ -1,8 +1,9 @@
 use object::{AABB, Object, HitResult, ObjectList};
 use world::Ray;
-use vec3::Vec3;
+use util::Vec3D;
 use std::f32::INFINITY;
 
+/*
 pub enum Tree<T: Object> {
     Inner(Box<[Tree<T>]>),
     Leaf(Box<[T]>),
@@ -17,7 +18,7 @@ fn divide_round_robin_mean<T: Object>(objs: Vec<T>, threshold: usize) {
         let centers = objs.iter()
             .map(|o| o.bounding_box())
             .map(|b| (b.min[axis] + b.max[axis]) / 2.0)
-            .collect<Vec<_>>();
+            .collect::<Vec<_>>();
         let mean = centers.sum() / centers.len();
         let lhs = objs.drain_filter();
         let rhs = ();
@@ -65,8 +66,8 @@ impl <T: Object> AABBTree<T> {
                 let list = ObjectList::new(nodes.into_vec());
                 let mut bbox = list.bounding_box();
 
-                bbox.min -= 0.01;
-                bbox.max += 0.01;
+                bbox.min -= Vec3D::from_scalar(0.01);
+                bbox.max += Vec3D::from_scalar(0.01);
 
                 AABBTree::Leaf(bbox, list)
             },
@@ -193,7 +194,7 @@ impl <T: Object> KDTree<T> {
         let mut nodes = vec![];
         let mut objects = vec![];
         let mut max_depth = 0;
-        let bbox = AABB::new(Vec3::fill(-INFINITY), Vec3::fill(INFINITY));
+        let bbox = AABB::new(Vec3D::from_scalar(-INFINITY), Vec3D::from_scalar(INFINITY));
         Self::create_node(tree, 0, &mut max_depth, &mut nodes, &mut objects, bbox);
 
         KDTree {
@@ -262,3 +263,4 @@ impl <T:Object> Object for KDTree<T> {
     }
 }
 
+*/

@@ -1,27 +1,27 @@
-use vec3::Vec3;
+use util::Vec3D;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Ray {
-    pub pos: Vec3,
-    pub dir: Vec3,
+    pub pos: Vec3D,
+    pub dir: Vec3D,
 }
 
 impl Ray {
-    pub fn new(pos: Vec3, dir: Vec3) -> Self {
+    pub fn new(pos: Vec3D, dir: Vec3D) -> Self {
         Ray { pos, dir: dir.normalize() }
     }
 
-    pub fn at(&self, t: f32) -> Vec3 {
+    pub fn at(&self, t: f32) -> Vec3D {
         self.pos + self.dir * t
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Camera {
-    pos: Vec3,
-    dir: Vec3,
-    horizontal: Vec3,
-    vertical: Vec3,
+    pos: Vec3D,
+    dir: Vec3D,
+    horizontal: Vec3D,
+    vertical: Vec3D,
     width: f32,
     height: f32,
 }
@@ -29,21 +29,21 @@ pub struct Camera {
 impl Camera {
     pub fn new() -> Self {
         Camera {
-            pos: Vec3::zero(),
-            dir: Vec3::unit_z(),
-            horizontal: Vec3::unit_x(),
-            vertical: Vec3::unit_y(),
+            pos: Vec3D::zero(),
+            dir: Vec3D::from(0.0, 0.0, 1.0),
+            horizontal: Vec3D::from(1.0, 0.0, 0.0),
+            vertical: Vec3D::from(0.0, 1.0, 0.0),
             width: 1.0,
             height: 1.0,
         }
     }
 
-    pub fn position(mut self, pos: Vec3) -> Self {
+    pub fn position(mut self, pos: Vec3D) -> Self {
         self.pos = pos;
         self
     }
 
-    pub fn look_towards(mut self, dir: Vec3, up: Vec3) -> Self {
+    pub fn look_towards(mut self, dir: Vec3D, up: Vec3D) -> Self {
         let dir = dir.normalize();
         let horz = up.cross(dir).normalize();
         let vert = dir.cross(horz).normalize();
@@ -54,7 +54,7 @@ impl Camera {
         self
     }
 
-    pub fn look_at(self, lookat: Vec3, up: Vec3) -> Self {
+    pub fn look_at(self, lookat: Vec3D, up: Vec3D) -> Self {
         self.look_towards(lookat - self.pos, up)
     }
 

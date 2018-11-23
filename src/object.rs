@@ -1,30 +1,37 @@
-use vec3::Vec3;
 use world::Ray;
 use std::mem::swap;
 use std::ops::Deref;
+use util::{vec3d, Vec3D, Mat3D, Dot};
 
 #[derive(Copy, Clone, Debug)]
 pub struct AABB {
-    pub min: Vec3,
-    pub max: Vec3,
+    pub min: Vec3D,
+    pub max: Vec3D,
 }
 
 impl AABB {
-    pub fn new(a: Vec3, b: Vec3) -> Self {
+    pub fn new(a: Vec3D, b: Vec3D) -> Self {
         AABB {
-            min: a.min(b),
-            max: a.max(b),
+            min: Vec3D::from_map(|i| min!(a[i], b[i])),
+            max: Vec3D::from_map(|i| max!(a[i], b[i])),
+        }
+    }
+
+    pub fn degenerate() -> Self {
+        AABB {
+            min: Vec3D::from_scalar(::std::f32::INFINITY),
+            max: Vec3D::from_scalar(-::std::f32::INFINITY),
         }
     }
 
     #[inline(always)]
     pub fn intersect_ray(&self, ray: &Ray) -> Option<(f32, f32)> {
-        let tx0 = (self.min.x - ray.pos.x) / ray.dir.x;
-        let tx1 = (self.max.x - ray.pos.x) / ray.dir.x;
-        let ty0 = (self.min.y - ray.pos.y) / ray.dir.y;
-        let ty1 = (self.max.y - ray.pos.y) / ray.dir.y;
-        let tz0 = (self.min.z - ray.pos.z) / ray.dir.z;
-        let tz1 = (self.max.z - ray.pos.z) / ray.dir.z;
+        let tx0 = (self.min[0] - ray.pos[0]) / ray.dir[0];
+        let tx1 = (self.max[0] - ray.pos[0]) / ray.dir[0];
+        let ty0 = (self.min[1] - ray.pos[1]) / ray.dir[1];
+        let ty1 = (self.max[1] - ray.pos[1]) / ray.dir[1];
+        let tz0 = (self.min[2] - ray.pos[2]) / ray.dir[2];
+        let tz1 = (self.max[2] - ray.pos[2]) / ray.dir[2];
 
         let t0 = max!(min!(tx0, tx1), min!(ty0, ty1), min!(tz0, tz1));
         let t1 = min!(max!(tx0, tx1), max!(ty0, ty1), max!(tz0, tz1));
@@ -36,17 +43,21 @@ impl AABB {
         }
     }
 
-    pub fn union(&self, other: &Self) -> Self {
-        AABB::new(
-            self.min.min(other.min),
-            self.max.max(other.max))
+    pub fn union_point(&self, point: Vec3D) -> Self {
+        AABB {
+            min: Vec3D::from_map(|i| min!(self.min[i], point[i])),
+            max: Vec3D::from_map(|i| max!(self.max[i], point[i])),
+        }
+    }
 
+    pub fn union(&self, other: &Self) -> Self {
+        self.union_point(other.min).union_point(other.max)
     }
 }
 
 pub struct HitResult {
     pub t: f32,
-    pub normal: Vec3
+    pub normal: Vec3D
 }
 
 pub trait Object: Sync + Send {
@@ -56,106 +67,121 @@ pub trait Object: Sync + Send {
 
 pub struct Transform<T> {
     obj: T,
-    pos: Vec3,
-    rot: Mat3,
+    pos: Vec3D,
+    rot: Mat3D,
+    rot_inv: Mat3D,
+    scale: f32,
+    scale_inv: f32,
 }
 
 impl <T> Transform<T> {
-    pub fn new(obj: T) {
+    pub fn new(obj: T) -> Self {
         Transform {
             obj,
-            pos: Vec3::zero(),
-            rotate: Mat3x3::identity(),
+            pos: Vec3D::zero(),
+            rot: Mat3D::one(),
+            rot_inv: Mat3D::one(),
+            scale: 1.0,
+            scale_inv: 1.0
         }
     }
 
-    pub fn translate(self, p: Vec3) {
+    pub fn translate(mut self, p: Vec3D) -> Self {
         self.pos += p;
-    }
-
-    pub fn rotate(self, axis: Vec3, angle: f32) {
-        let u = axis.normalize();
-        let c = angle.cos();
-        let s = angle.sin();
-
-        let m = Mat3::new(
-            c + u.x * u.x * (1 - c),
-            u.x *  u.y * (1 - c) - u.z * s,
-            u.x * u.z * (1 - c) + u.y * s,
-
-            u.y * u.x * (1 - c) + u.z * s,
-            c + u.y * u.y * (1 - c),
-            u.y * u.z * (1 - c) - u.x * s,
-
-            u.z * u.x * (1 - c) - u.y,
-            u.z * u.y * (1 - c) + u.x * s,
-            c + u.z * u.z * (1 - c),
-        );
-
-        self.pos = m.mult(self.pos);
-        self.rot = m.mult(self.rot);
-        self.rot_inv = self.rot.clone().transpose();
         self
     }
 
-    pub fn rotate_x(self, angle: f32) {
-        self.rotate(Vec3::unit_x(), angle)
+    pub fn scale(mut self, factor: f32) -> Self {
+        self.scale *= factor;
+        self.scale_inv = 1.0 / self.scale;
+        self
     }
 
-    pub fn rotate_y(self, angle: f32) {
-        self.rotate(Vec3::unit_y(), angle)
+    pub fn rotate(mut self, axis: Vec3D, angle: f32) -> Self {
+        let u = axis.normalize();
+        let (ux, uy, uz) = (axis[0], axis[1], axis[2]);
+
+        let c = angle.cos();
+        let s = angle.sin();
+
+        let m = Mat3D::from(
+            c + ux * ux * (1.0 - c),
+            ux * uy * (1.0 - c) - uz * s,
+            ux * uz * (1.0 - c) + uy * s,
+
+            uy * ux * (1.0 - c) + uz * s,
+            c + uy * uy * (1.0 - c),
+            uy * uz * (1.0 - c) - ux * s,
+
+            uz * ux * (1.0 - c) - uy * s,
+            uz * uy * (1.0 - c) + ux * s,
+            c + uz * uz * (1.0 - c),
+        );
+
+        self.pos = m.dot(self.pos);
+        self.rot = m.dot(self.rot);
+        self.rot_inv = self.rot.transpose();
+        self
     }
 
-    pub fn rotate_z(self, angle: f32) {
-        self.rotate(Vec3::unit_z(), angle)
+    pub fn rotate_x(mut self, angle: f32) -> Self {
+        self.rotate(Vec3D::from(1.0, 0.0, 0.0), angle)
+    }
+
+    pub fn rotate_y(mut self, angle: f32) -> Self {
+        self.rotate(Vec3D::from(0.0, 1.0, 0.0), angle)
+    }
+
+    pub fn rotate_z(mut self, angle: f32) -> Self {
+        self.rotate(Vec3D::from(0.0, 0.0, 1.0), angle)
     }
 }
 
 impl <T: Object> Object for Transform<T> {
     fn hit(&self, ray: &Ray, min_t: f32, max_t: f32) -> Option<HitResult> {
-        let p = self.rot_inv.transform(ray.pos) - self.pos;
-        let d = self.rot_inv.transform(ray.dir);
+        let p = self.rot_inv.dot((ray.pos - self.pos) / self.scale);
+        let d = self.rot_inv.dot(ray.dir);
         let r = Ray::new(p, d);
 
-        match self.obj.hit(r, min_t, max_t) {
-            Some(result) => HitResult {
-                t: result.t,
-                normal: self.rot.transform(result.normal),
-            },
+        match self.obj.hit(&r, min_t, max_t) {
+            Some(result) => Some(HitResult {
+                t: result.t * self.scale,
+                normal: self.rot.dot(result.normal),
+            }),
             None => None
         }
     }
 
+
     fn bounding_box(&self) -> AABB {
-        let mut min = Vec3::fill(f32::INFINITY);
-        let mut max = Vec3::fill(-f32::INFINITY);
-        let bbox = self.obj.bounding_box();
+        let b = self.obj.bounding_box();
+        let (min, max) = (b.min, b.max);
+        let mut bbox = AABB::degenerate();
 
         for i in 0..8 {
-            let p = Vec3::new(
-                iff!(i % 2 <= 0, min.x, min.x),
-                iff!(i % 4 <= 2, min.x, max.y),
-                iff!(i     <= 4, min.x, max.z),
+            let p = vec3d(
+                iff!(i % 2 < 1, min[0], max[0]),
+                iff!(i % 4 < 2, min[1], max[1]),
+                iff!(i     < 4, min[2], max[2]),
             );
 
-            let q = self.rot.mult(p) + self.pos;
-            min = min.min(p);
-            max = max.max(p);
+            let q = self.rot.dot(p) * self.scale + self.pos;
+            bbox = bbox.union_point(q);
         }
 
-        AABB::new(min, max)
+        bbox
     }
 }
 
 
 #[derive(Copy, Clone, Debug)]
 pub struct Sphere {
-    pos: Vec3,
+    pos: Vec3D,
     radius: f32,
 }
 
 impl Sphere {
-    pub fn new(pos: Vec3, radius: f32) -> Self {
+    pub fn new(pos: Vec3D, radius: f32) -> Self {
         Sphere { pos, radius }
     }
 }
@@ -165,7 +191,7 @@ impl Object for Sphere {
 
         let offset = ray.pos - self.pos; // o - c
         let a = -ray.dir.dot(offset);    // -(l . (o - c))
-        let b = a * a - offset.length_sqr() + self.radius * self.radius; // (l . (o - c))**2 - (o - c)**2 + r ** 2
+        let b = a * a - offset.sqrlen() + self.radius * self.radius; // (l . (o - c))**2 - (o - c)**2 + r ** 2
 
         if b < 0.0 {
             return None
@@ -189,22 +215,24 @@ impl Object for Sphere {
 
     fn bounding_box(&self) -> AABB {
         AABB::new(
-            self.pos + self.radius,
-            self.pos - self.radius)
+            self.pos + Vec3D::from_scalar(self.radius),
+            self.pos - Vec3D::from_scalar(self.radius))
     }
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct Cuboid {
-    min: Vec3,
-    max: Vec3
+    min: Vec3D,
+    max: Vec3D
 }
 
 impl Cuboid {
-    pub fn new(a: Vec3, b: Vec3) -> Self {
+    pub fn new(a: Vec3D, b: Vec3D) -> Self {
+        let bbox = AABB::new(a, b);
+
         Cuboid {
-            min: a.min(b),
-            max: a.max(b),
+            min: bbox.min,
+            max: bbox.max,
         }
     }
 }
@@ -226,7 +254,10 @@ impl Object for Cuboid {
 
 
         if t_min < t_max {
-            Some(HitResult{t: t_min, normal: Vec3::unit_x()})
+            Some(HitResult{
+                t: t_min, 
+                normal: Vec3D::zero(),
+            })
         } else {
             None
         }
@@ -278,6 +309,12 @@ pub struct BoundingBox<T>(T, AABB);
 impl <T: Object> BoundingBox<T> {
     pub fn new(obj: T) -> Self {
         let bb = obj.bounding_box();
+        let diff = (bb.max - bb.min).iter().sum::<f32>() * 1e-5;
+        let bb = AABB::new(
+            bb.min - Vec3D::from_scalar(diff),
+            bb.max + Vec3D::from_scalar(diff),
+        );
+
         BoundingBox(obj, bb)
     }
 }
@@ -288,9 +325,8 @@ impl <T: Object> Object for BoundingBox<T> {
             if t_in <= t_max && t_out >= t_min {
                 let t0 = max!(t_in, t_min);
                 let t1 = min!(t_out, t_max);
-                let dt = (t1 - t0) * 0.01;
 
-                return self.0.hit(ray, t0 - dt, t1 + dt);
+                return self.0.hit(ray, t0, t1);
             }
         }
 
@@ -314,9 +350,9 @@ impl <T: Object + ?Sized> Object for Box<T> {
 
 #[derive(Debug, Copy, Clone, Constructor)]
 pub struct Triangle {
-    a: Vec3,
-    b: Vec3,
-    c: Vec3,
+    a: Vec3D,
+    b: Vec3D,
+    c: Vec3D,
 }
 
 impl Object for Triangle {
@@ -349,21 +385,22 @@ impl Object for Triangle {
     }
 
     fn bounding_box(&self) -> AABB {
-        let lbnd = self.a.min(self.b).min(self.c);
-        let ubnd = self.a.max(self.b).max(self.c);
-        AABB::new(lbnd, ubnd)
+        let (a, b, c) = (self.a, self.b, self.c);
+        let min = Vec3D::from_map(|i| min!(a[i], b[i], c[i]));
+        let max = Vec3D::from_map(|i| max!(a[i], b[i], c[i]));
+        AABB::new(min, max)
     }
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct FastTriangle {
-    a: Vec3,
-    a2b: Vec3,
-    a2c: Vec3,
+    a: Vec3D,
+    a2b: Vec3D,
+    a2c: Vec3D,
 }
 
 impl FastTriangle {
-    pub fn new(a: Vec3, b: Vec3, c: Vec3) -> Self {
+    pub fn new(a: Vec3D, b: Vec3D, c: Vec3D) -> Self {
         let a2b = b - a;
         let a2c = c - a;
 
@@ -403,7 +440,7 @@ impl Object for FastTriangle {
         let a = self.a;
         let b = a + self.a2b;
         let c = a + self.a2c;
-        AABB::new(a.min(b).min(c), a.max(b).max(c))
+        Triangle { a, b, c }.bounding_box()
     }
 }
 
