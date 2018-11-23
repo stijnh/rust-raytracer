@@ -57,7 +57,9 @@ impl AABB {
 
 pub struct HitResult {
     pub t: f32,
-    pub normal: Vec3D
+    pub n: Vec3D,
+    pub p: Vec3D,
+    pub uv: (f32, f32),
 }
 
 pub trait Object: Sync + Send {
@@ -92,6 +94,7 @@ impl <T> Transform<T> {
     }
 
     pub fn scale(mut self, factor: f32) -> Self {
+        assert!(factor > 0.0);
         self.scale *= factor;
         self.scale_inv = 1.0 / self.scale;
         self
@@ -139,17 +142,16 @@ impl <T> Transform<T> {
 
 impl <T: Object> Object for Transform<T> {
     fn hit(&self, ray: &Ray, min_t: f32, max_t: f32) -> Option<HitResult> {
-        let p = self.rot_inv.dot((ray.pos - self.pos) / self.scale);
+        let p = self.rot_inv.dot((ray.pos - self.pos) * self.scale_inv);
         let d = self.rot_inv.dot(ray.dir);
         let r = Ray::new(p, d);
 
-        match self.obj.hit(&r, min_t, max_t) {
-            Some(result) => Some(HitResult {
-                t: result.t * self.scale,
-                normal: self.rot.dot(result.normal),
-            }),
-            None => None
-        }
+        self.obj.hit(&r, min_t, max_t).map(|r| HitResult {
+            t: r.t * self.scale,
+            p: self.rot.dot(r.p) * self.scale + self.pos,
+            n: self.rot.dot(r.n),
+            uv: r.uv,
+        })
     }
 
 
@@ -210,7 +212,12 @@ impl Object for Sphere {
 
         let normal = offset + ray.dir * t;
 
-        Some(HitResult{ t, normal })
+        Some(HitResult {
+            t, 
+            n: normal,
+            p: ray.pos + ray.dir * t,
+            uv: (0.0, 0.0),
+        })
     }
 
     fn bounding_box(&self) -> AABB {
@@ -239,24 +246,41 @@ impl Cuboid {
 
 impl Object for Cuboid {
     fn hit(&self, ray: &Ray, mut t_min: f32, mut t_max: f32) -> Option<HitResult> {
+        let mut t = t_min;
+        let mut normal = Vec3D::zero();
+
         for i in 0..3 {
             if ray.dir[i].abs() > 0.001 {
                 let mut tx_min = (self.min[i] - ray.pos[i]) / ray.dir[i];
                 let mut tx_max = (self.max[i] - ray.pos[i]) / ray.dir[i];
-                if tx_min > tx_max { swap(&mut tx_min, &mut tx_max); }
+                let mut n = Vec3D::from_map(|j| iff!(i == j, -1.0, 0.0));
 
-                t_min = t_min.max(tx_min);
-                t_max = t_max.min(tx_max);
+                if tx_min > tx_max { 
+                    swap(&mut tx_min, &mut tx_max); 
+                    n = -n;
+                }
+
+                if tx_min > t {
+                    t = tx_min;
+                    normal = n;
+                }
+
+                if tx_max < t_max {
+                    t_max = tx_max;
+                }
+
             } else if ray.pos[i] < self.min[i] || ray.pos[i] > self.max[i] {
                 return None;
             }
         }
 
 
-        if t_min < t_max {
+        if t < t_max {
             Some(HitResult{
-                t: t_min, 
-                normal: Vec3D::zero(),
+                t, 
+                n: normal,
+                p: ray.pos + ray.dir * t,
+                uv: (0.0, 0.0),
             })
         } else {
             None
@@ -296,11 +320,9 @@ impl <T> Object for ObjectList<T> where T: Object {
 
     fn bounding_box(&self) -> AABB {
         self.0.iter()
-            .fold(None, |result, obj| {
-                let a = obj.bounding_box();
-                let b = result.unwrap_or(a);
-                Some(AABB::union(&a, &b))
-            }).unwrap()
+            .fold(AABB::degenerate(), |result, obj| {
+                result.union(&obj.bounding_box())
+            })
     }
 }
 
@@ -377,7 +399,9 @@ impl Object for Triangle {
         if t > t_min && t < t_max && u >= 0.0 && v >= 0.0 && u + v < 1.0 {
             Some(HitResult {
                 t,
-                normal: e1.cross(e2)
+                n: e1.cross(e2),
+                p: ray.pos + t * ray.dir,
+                uv: (u, v),
             })
         } else {
             None
@@ -430,7 +454,12 @@ impl Object for FastTriangle {
 
         if u > 0.0 && v > 0.0 && v + u < 1.0 {
             let normal = E1.cross(E2);
-            Some(HitResult{t, normal}) 
+            Some(HitResult{
+                t, 
+                n: normal,
+                p: O + D * t,
+                uv: (u, v),
+            }) 
         } else {
             None
         }

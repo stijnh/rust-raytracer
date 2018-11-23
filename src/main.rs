@@ -1,3 +1,5 @@
+mod math;
+use math::Foo;
 
 extern crate image;
 extern crate pbr;
@@ -5,6 +7,7 @@ extern crate rayon;
 extern crate float_ord;
 extern crate partition;
 extern crate vecmat;
+extern crate json;
 #[macro_use] extern crate derive_more;
 #[macro_use] extern crate failure;
 #[macro_use] extern crate crunchy;
@@ -23,7 +26,7 @@ use object::{Sphere, Object, Cuboid, ObjectList, BoundingBox, Triangle, FastTria
 use float_ord::FloatOrd;
 use partition::partition;
 use std::sync::{Arc, Mutex};
-use loader::load_obj;
+use loader::{load_obj, load_scene};
 use util::{vec3d, Vec3D, Dot};
 
 fn divide_objects<T: 'static + Object + Clone>(objs: &mut [T], axis: u8, depth: u8) -> Box<dyn Object> {
@@ -69,30 +72,31 @@ fn create_world() -> Box<dyn Object> {
     let mut objs = vec![];
     let tri = load_obj("bunny.obj").unwrap();
 
-    let transform = |v: Vec3D| {
-        vec3d(v[2], v[0], v[1]) * 1500.0 - vec3d(10.0, -50.0, 100.0)
-    };
+    //let transform = |v: Vec3D| {
+    //    vec3d(v[2], v[0], v[1]) * 1500.0 - vec3d(10.0, -50.0, 100.0)
+    //};
 
     for (a, b, c) in tri.iter().cloned() {
-        let a = transform(a);
-        let b = transform(b);
-        let c = transform(c);
+        //let a = transform(a);
+        //let b = transform(b);
+        //let c = transform(c);
         objs.push(FastTriangle::new(a, b, c));
     }
 
-    let min_z = objs
+    let min_y = objs
         .iter()
-        .map(|t| t.bounding_box().min[2])
+        .map(|t| t.bounding_box().min[1])
         .map(|f| FloatOrd(f))
         .min()
         .unwrap().0;
 
     println!("tris={}", objs.len());
 
-    let a = vec3d(250.0, 250.0, min_z);
-    let b = vec3d(250.0, -250.0, min_z);
-    let c = vec3d(-250.0, 250.0, min_z);
-    let d = vec3d(-250.0, -250.0, min_z);
+    let a = vec3d(0.5, min_y, 0.5);
+    let b = vec3d(-0.5, min_y, 0.5);
+    let c = vec3d(0.5, min_y, -0.5);
+    let d = vec3d(-0.5, min_y, -0.5);
+
     objs.push(FastTriangle::new(a, c, b));
     objs.push(FastTriangle::new(c, d, b));
 
@@ -102,6 +106,11 @@ fn create_world() -> Box<dyn Object> {
     */
 
     let output = divide_objects(&mut objs, 0, 0);
+    let output = Transform::new(output)
+        .scale(3500.0)
+        .rotate_x(0.5 * 3.14)
+        .rotate_z(0.5 * 3.14)
+        .translate(vec3d(-30.0, 100.0, -300.0));
     Box::new(output)
 
 
@@ -158,27 +167,18 @@ fn create_world() -> Box<dyn Object> {
 
 fn main() {
     let args = env::args().collect::<Vec<_>>();
-    let angle = if args.len() > 1 {
-        args[1].parse::<f32>().unwrap() / 360.0 * 2.0 * 3.14
-    } else {
-        0.0
-    };
+    let (cam, scene) = load_scene(&args[1]).unwrap();
 
     type Pixel = image::Rgb<u8>;
 
-    let subsampling = 4u32;
-    let width = 800u32;
-    let height = 600u32;
+    let subsampling = 2u32;
+    let width = 800u32 * 2;
+    let height = 600u32 * 2;
     let mut img = image::ImageBuffer::<Pixel, _>::new(width, height);
 
-    let cam = Camera::new()
-        //.position(vec3d(125.0, -50.1, 20.0))
-        //.look_at(vec3d(0.0, 0.0, 0.0), vec3(0.0, 0.0, -1.0))
-        .position(vec3d(400.0, 0.0, 200.0))
-        .look_at(vec3d(0.0, 0.0, 0.0), vec3d(1.0, 0.0, 0.0))
-        .perspective(100.0, width as f32, height as f32);
+    let cam = cam.perspective(100.0, width as f32, height as f32);
 
-    let world = Transform::new(create_world()).rotate_z(angle);
+    let world = Transform::new(create_world());
     let light = vec3d(0.0, 0.0, 1.0).normalize();
 
 
@@ -207,7 +207,7 @@ fn main() {
                         let hit = world.hit(&ray, 0.0, max_t);
 
                         let p = if let Some(result) = hit {
-                            let normal = result.normal.normalize();
+                            let normal = result.n.normalize();
                             let mut f = normal.dot(light).max(0.0);
 
                             let p = ray.pos + result.t * ray.dir;

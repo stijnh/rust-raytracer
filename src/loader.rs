@@ -1,7 +1,9 @@
 use std::fs::File;
 use std::io::{BufReader, BufRead, Result as IoResult, Error as IoError};
-use object::Triangle;
+use json::{JsonValue, Error as JsonError, parse as json_parse};
+use object::{Object, ObjectList, Triangle};
 use util::{Vec3D, vec3d};
+use world::Camera;
 
 #[derive(Debug, Fail)]
 pub enum LoaderError {
@@ -10,6 +12,9 @@ pub enum LoaderError {
 
     #[fail(display="{}", 0)]
     ParseError(String),
+
+    #[fail(display="{}", 0)]
+    JsonError(JsonError),
 }
 
 pub fn load_obj(filename: &str) -> Result<Vec<(Vec3D, Vec3D, Vec3D)>, LoaderError> {
@@ -86,4 +91,51 @@ pub fn load_obj(filename: &str) -> Result<Vec<(Vec3D, Vec3D, Vec3D)>, LoaderErro
     }
 
     Ok(triangles)
+}
+
+pub fn load_scene(filename: &str) -> Result<(Camera, Box<dyn Object>), LoaderError> {
+    let content = ::std::fs::read_to_string(filename).map_err(|e| LoaderError::IoError(e))?;
+    let root = json_parse(&content).map_err(|e| LoaderError::JsonError(e))?;
+
+    let parse_error = |msg, path| {
+        LoaderError::ParseError(format!(
+            "{}: in file {} for {}", msg, filename, path))
+    };
+
+    let parse_vec3d = |val: &JsonValue, path| {
+        let (x, y, z) = if val.is_array() {
+            (&val[0], &val[1], &val[2])
+        } else if val.is_object() {
+            (&val["x"], &val["y"], &val["z"])
+        } else if val.is_null() {
+            raise!(parse_error(format!(
+                "element must be array or object, not {}",
+                val), path));
+        } else {
+            raise!(parse_error("element not found".into(), path));
+        };
+
+        match (x.as_f32(), y.as_f32(), z.as_f32()) {
+            (Some(x), Some(y), Some(z)) => {
+                Ok(vec3d(x, y, z))
+            },
+            _ => {
+                raise!(parse_error(format!("failed to parse ({}, {}, {}) as 3D vector",
+                    x, y, z), path));
+            }
+        }
+    };
+
+    let cam_pos = parse_vec3d(&root["camera"]["position"], "camera.position")?;
+    let cam_lookat = parse_vec3d(&root["camera"]["lookat"], "camera.lookat")?;
+    let cam_up = parse_vec3d(&root["camera"]["up"], "camera.up")?;
+
+    let cam = Camera::new()
+        .position(cam_pos)
+        .look_at(cam_lookat, cam_up);
+
+    let list: ObjectList<_> = ObjectList::<Triangle>::new(vec![]);
+    let out: Box<ObjectList<_>> = Box::new(list);
+
+    Ok((cam, out))
 }
