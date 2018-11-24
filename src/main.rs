@@ -1,6 +1,6 @@
 mod math;
-use math::Foo;
 
+extern crate num;
 extern crate image;
 extern crate pbr;
 extern crate rayon;

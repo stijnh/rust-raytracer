@@ -11,7 +11,7 @@ impl Ray {
         Ray { pos, dir: dir.normalize() }
     }
 
-    pub fn at(&self, t: f32) -> Self {
+    pub fn at(&self, t: f32) -> Vec3D {
         self.pos + self.dir * t
     }
 }
