@@ -1,4 +1,4 @@
-
+extern crate rand;
 extern crate num;
 extern crate image;
 extern crate pbr;
@@ -26,6 +26,7 @@ use partition::partition;
 use std::sync::{Arc, Mutex};
 use loader::{load_obj, load_scene};
 use math::{vec3d, Ray, Vec3D, Dot, Quaternion};
+use geom::AABBTree;
 
 fn divide_objects<T: 'static + Geometry + Clone>(objs: &mut [T], axis: u8, depth: u8) -> Box<dyn Geometry> {
     let n = objs.len();
@@ -66,7 +67,7 @@ fn divide_objects<T: 'static + Geometry + Clone>(objs: &mut [T], axis: u8, depth
     }
 }
 
-fn create_world() -> Box<dyn Geometry> {
+fn create_world() -> impl Geometry {
     let mut objs = vec![];
     let tri = load_obj("bunny.obj").unwrap();
 
@@ -101,15 +102,26 @@ fn create_world() -> Box<dyn Geometry> {
     d   b
     */
 
-    let output = divide_objects(&mut objs, 0, 0);
+    //let output = divide_objects(&mut objs, 0, 0);
+    let output = AABBTree::new(objs);
     let output = Transform::new(output)
-        .scale(14.0 * 2.50 * 100.0)
+        .scale(14.0 * 2.0 * 100.0)
         .rotate_z(0.5 * 3.14)
         .rotate_x(0.5 * 3.14)
         .translate(vec3d(-30.0, 100.0, -300.0))
         ;
     println!("{:?}", output.bounding_box());
-    Box::new(output)
+
+    let bunny: Arc<dyn Geometry> = Arc::new(output);
+    let mut bunnies = vec![];
+
+    for x in -5..5 {
+        let p = vec3d(0.0, x as f32 * 200.0, 0.0);
+
+        bunnies.push(BoundingBox::new(Transform::new(bunny.clone()).translate(p)));
+    }
+
+    GeometryList::from_vec(bunnies)
 }
 
 fn main() {
@@ -125,8 +137,8 @@ fn main() {
 
     let cam = cam.perspective(100.0, width as f32, height as f32);
 
-    let mut world = GeometryList::<Arc<dyn Geometry>>::new();
-    world.add(create_world().into());
+    let mut world = GeometryList::new();
+    world.add(create_world());
     let light = vec3d(0.0, 0.0, 1.0).normalize();
 
 

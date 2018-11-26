@@ -6,12 +6,14 @@ mod sphere;
 mod transform;
 mod triangle;
 mod cuboid;
+mod bvh;
 
 pub use self::common::{BoundingBox, GeometryList};
 pub use self::transform::{Scale, Translate, Rotate, Transform};
 pub use self::sphere::Sphere;
 pub use self::triangle::Triangle;
 pub use self::cuboid::Cuboid;
+pub use self::bvh::AABBTree;
 
 pub struct HitResult {
     pub pos: Vec3D,
