@@ -1,20 +1,4 @@
-use util::Vec3D;
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Ray {
-    pub pos: Vec3D,
-    pub dir: Vec3D,
-}
-
-impl Ray {
-    pub fn new(pos: Vec3D, dir: Vec3D) -> Self {
-        Ray { pos, dir: dir.normalize() }
-    }
-
-    pub fn at(&self, t: f32) -> Vec3D {
-        self.pos + self.dir * t
-    }
-}
+use math::{Vec3D, Ray};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Camera {
@@ -30,9 +14,9 @@ impl Camera {
     pub fn new() -> Self {
         Camera {
             pos: Vec3D::zero(),
-            dir: Vec3D::from(0.0, 0.0, 1.0),
-            horizontal: Vec3D::from(1.0, 0.0, 0.0),
-            vertical: Vec3D::from(0.0, 1.0, 0.0),
+            dir: Vec3D::new(0.0, 0.0, 1.0),
+            horizontal: Vec3D::new(1.0, 0.0, 0.0),
+            vertical: Vec3D::new(0.0, 1.0, 0.0),
             width: 1.0,
             height: 1.0,
         }

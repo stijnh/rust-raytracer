@@ -1,4 +1,3 @@
-mod math;
 
 extern crate num;
 extern crate image;
@@ -6,30 +5,29 @@ extern crate pbr;
 extern crate rayon;
 extern crate float_ord;
 extern crate partition;
-extern crate vecmat;
 extern crate json;
 #[macro_use] extern crate derive_more;
 #[macro_use] extern crate failure;
 #[macro_use] extern crate crunchy;
 
 #[macro_use] mod util;
-mod world;
-mod object;
+mod math;
+mod camera;
 mod loader;
-mod bvh;
+mod geom;
 
 use rayon::prelude::*;
 
 use std::env;
-use world::{Ray, Camera};
-use object::{Sphere, Object, Cuboid, ObjectList, BoundingBox, Triangle, FastTriangle, Transform};
+use camera::Camera;
+use geom::{Sphere, Geometry, GeometryList, BoundingBox, Triangle, Transform};
 use float_ord::FloatOrd;
 use partition::partition;
 use std::sync::{Arc, Mutex};
 use loader::{load_obj, load_scene};
-use util::{vec3d, Vec3D, Dot};
+use math::{vec3d, Ray, Vec3D, Dot, Quaternion};
 
-fn divide_objects<T: 'static + Object + Clone>(objs: &mut [T], axis: u8, depth: u8) -> Box<dyn Object> {
+fn divide_objects<T: 'static + Geometry + Clone>(objs: &mut [T], axis: u8, depth: u8) -> Box<dyn Geometry> {
     let n = objs.len();
     assert!(n > 0);
 
@@ -38,7 +36,7 @@ fn divide_objects<T: 'static + Object + Clone>(objs: &mut [T], axis: u8, depth: 
     }
 
     if n < 5 || depth > 3 {
-        return Box::new(ObjectList::new(objs.to_vec()));
+        return Box::new(GeometryList::from_vec(objs.to_vec()));
     }
 
     let mut centers: Vec<_> = objs.into_iter().map(|obj| {
@@ -64,23 +62,21 @@ fn divide_objects<T: 'static + Object + Clone>(objs: &mut [T], axis: u8, depth: 
         let left = BoundingBox::new(divide_objects(before, (axis + 1) % 3, 0));
         let right = BoundingBox::new(divide_objects(after, (axis + 1) % 3, 0));
 
-        Box::new(ObjectList::new(vec![left, right]))
+        Box::new(GeometryList::from_vec(vec![left, right]))
     }
 }
 
-fn create_world() -> Box<dyn Object> {
+fn create_world() -> Box<dyn Geometry> {
     let mut objs = vec![];
     let tri = load_obj("bunny.obj").unwrap();
 
     //let transform = |v: Vec3D| {
     //    vec3d(v[2], v[0], v[1]) * 1500.0 - vec3d(10.0, -50.0, 100.0)
     //};
+    //
 
     for (a, b, c) in tri.iter().cloned() {
-        //let a = transform(a);
-        //let b = transform(b);
-        //let c = transform(c);
-        objs.push(FastTriangle::new(a, b, c));
+        objs.push(Triangle::new(a, b, c));
     }
 
     let min_y = objs
@@ -97,8 +93,8 @@ fn create_world() -> Box<dyn Object> {
     let c = vec3d(0.5, min_y, -0.5);
     let d = vec3d(-0.5, min_y, -0.5);
 
-    objs.push(FastTriangle::new(a, c, b));
-    objs.push(FastTriangle::new(c, d, b));
+    objs.push(Triangle::new(a, c, b));
+    objs.push(Triangle::new(c, d, b));
 
     /*
     c   a
@@ -107,62 +103,13 @@ fn create_world() -> Box<dyn Object> {
 
     let output = divide_objects(&mut objs, 0, 0);
     let output = Transform::new(output)
-        .scale(3500.0)
-        .rotate_x(0.5 * 3.14)
+        .scale(14.0 * 2.50 * 100.0)
         .rotate_z(0.5 * 3.14)
-        .translate(vec3d(-30.0, 100.0, -300.0));
+        .rotate_x(0.5 * 3.14)
+        .translate(vec3d(-30.0, 100.0, -300.0))
+        ;
+    println!("{:?}", output.bounding_box());
     Box::new(output)
-
-
-    /*
-    for i in -100..=100 {
-        for j in -100..=100 {
-            for k in -100..=100 {
-                let obj = Sphere::new(vec3d(i as f32, j as f32, k as f32), 0.05);
-                let c = vec3d(i as f32, j as f32, k as f32);
-                //let obj = Cuboid::new(c - 0.1, c + 0.1);
-                //objs.push(Box::new(obj));
-                //objs.push(obj);
-            }
-        }
-    }
-
-
-    let n = 10;
-    let m = 10;
-
-    let get_vertex = |i, j| {
-        let radius = 50.0;
-        let center = vec3d(0.0, -50.0, 0.0)*0.0;
-
-        let phi = (i as f32) / (n as f32) * std::f32::consts::PI;
-        let rho = (j as f32 - i as f32*0.5) / (m as f32) * 2.0 * std::f32::consts::PI;
-
-        let x = rho.cos() * phi.sin();
-        let y = rho.sin() * phi.sin();
-        let z = phi.cos();
-       
-        vec3d(x, y, z) * radius + center
-    };
-
-
-    for i in 0..n {
-        for j in 0..=m {
-            let a = get_vertex(i, j);
-            let b = get_vertex(i, j + 1);
-            let c = get_vertex(i + 1, j);
-            let d = get_vertex(i + 1, j + 1);
-
-            objs.push(Triangle::new(a, b, d));
-            objs.push(Triangle::new(a, c, d));
-        }
-    }
-
-    let left = divide_objects(&mut objs, 0, 0);
-    let right = Box::new(Sphere::new(vec3d(0.0, 100.0, 0.0), 50.0));
-
-    //Box::new(ObjectList::new(vec![left, right]))
-    */
 }
 
 fn main() {
@@ -171,14 +118,15 @@ fn main() {
 
     type Pixel = image::Rgb<u8>;
 
-    let subsampling = 2u32;
-    let width = 800u32 * 2;
-    let height = 600u32 * 2;
+    let subsampling = 1u32;
+    let width = 800u32;
+    let height = 600u32;
     let mut img = image::ImageBuffer::<Pixel, _>::new(width, height);
 
     let cam = cam.perspective(100.0, width as f32, height as f32);
 
-    let world = Transform::new(create_world());
+    let mut world = GeometryList::<Arc<dyn Geometry>>::new();
+    world.add(create_world().into());
     let light = vec3d(0.0, 0.0, 1.0).normalize();
 
 
@@ -203,19 +151,19 @@ fn main() {
                         let y = (j as f32) + (b as f32 / subsampling as f32);
                         let ray = cam.ray_at(x, y);
 
-                        let max_t = 10000.0;
+                        let max_t = 1e12;
                         let hit = world.hit(&ray, 0.0, max_t);
 
                         let p = if let Some(result) = hit {
-                            let normal = result.n.normalize();
-                            let mut f = normal.dot(light).max(0.0);
+                            let normal = result.norm.normalize();
+                            let mut f = normal.dot(light).max(0.1);
 
                             let p = ray.pos + result.t * ray.dir;
                             let mut samples_total = 0;
                             let mut samples_hit = 0;
 
                             f *= {
-                                let ray = Ray::new(p, vec3d(0.0, 0.0, 1.0));
+                                let ray = Ray::new(p, vec3d(0.22, 0.22, 0.95));
                                 let hit = world.hit(&ray, 0.1, max_t);
                                 if hit.is_some() { 0.1 } else { 1.0 }
                             };

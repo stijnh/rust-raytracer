@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::{BufReader, BufRead, Result as IoResult, Error as IoError};
 use json::{JsonValue, Error as JsonError, parse as json_parse};
-use object::{Object, ObjectList, Triangle};
-use util::{Vec3D, vec3d};
-use world::Camera;
+use geom::{Geometry, GeometryList, Triangle};
+use math::{Vec3D, vec3d};
+use camera::Camera;
 
 #[derive(Debug, Fail)]
 pub enum LoaderError {
@@ -93,7 +93,7 @@ pub fn load_obj(filename: &str) -> Result<Vec<(Vec3D, Vec3D, Vec3D)>, LoaderErro
     Ok(triangles)
 }
 
-pub fn load_scene(filename: &str) -> Result<(Camera, Box<dyn Object>), LoaderError> {
+pub fn load_scene(filename: &str) -> Result<(Camera, Box<dyn Geometry>), LoaderError> {
     let content = ::std::fs::read_to_string(filename).map_err(|e| LoaderError::IoError(e))?;
     let root = json_parse(&content).map_err(|e| LoaderError::JsonError(e))?;
 
@@ -134,8 +134,8 @@ pub fn load_scene(filename: &str) -> Result<(Camera, Box<dyn Object>), LoaderErr
         .position(cam_pos)
         .look_at(cam_lookat, cam_up);
 
-    let list: ObjectList<_> = ObjectList::<Triangle>::new(vec![]);
-    let out: Box<ObjectList<_>> = Box::new(list);
+    let list: GeometryList<_> = GeometryList::<Triangle>::from_vec(vec![]);
+    let out: Box<GeometryList<_>> = Box::new(list);
 
     Ok((cam, out))
 }

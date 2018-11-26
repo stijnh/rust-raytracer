@@ -119,7 +119,7 @@ impl <T: Copy + Mul<Output=T> + Sub<Output=T>> Vec3<T> {
 impl<T: Num + Float> Vec3<T> {
     #[inline(always)]
     pub fn length_squared(&self) -> T {
-        self.dot(self)
+        self.dot(*self)
     }
 
     #[inline(always)]
@@ -157,7 +157,7 @@ impl <T: Mul<Output=T> + Add<Output=T> + Copy> Dot for Vec3<T> {
     type Output = <T as Add>::Output;
 
     #[inline(always)]
-    fn dot(&self, rhs: &Self) -> Self::Output {
+    fn dot(&self, rhs: Self) -> Self::Output {
         self[0] * rhs[0] + self[1] * rhs[1] + self[2] * rhs[2]
     }
 }

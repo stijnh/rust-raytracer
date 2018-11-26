@@ -5,6 +5,8 @@ authors = ["stijnh <mail@stijnh.nl>"]
 
 [profile.release]
 panic = "abort"
+opt-level = 3
+lto = true
 
 [dependencies]
 derive_more="0.12.0"
@@ -19,3 +21,4 @@ vecmat = "0.3.1"
 json = "0.11.13"
 crunchy = "0.1.6"
 num = "0.2.0"
+permutation = "0.2.5"
