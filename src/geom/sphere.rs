@@ -1,5 +1,5 @@
-use math::{Vec3D, Ray, AABB, Dot};
 use geom::{Geometry, HitResult};
+use math::{Dot, Ray, Vec3D, AABB};
 
 #[derive(Debug, PartialEq, Constructor)]
 pub struct Sphere {
@@ -10,11 +10,11 @@ pub struct Sphere {
 impl Geometry for Sphere {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let offset = ray.pos - self.center;
-        let a = -ray.dir.dot(offset);   
-        let b = a * a - offset.length_squared() + self.radius * self.radius; 
+        let a = -ray.dir.dot(offset);
+        let b = a * a - offset.length_squared() + self.radius * self.radius;
 
         if b < 0.0 {
-            return None
+            return None;
         }
 
         let t0 = a - b.sqrt();
@@ -25,14 +25,14 @@ impl Geometry for Sphere {
         } else if t1 > t_min && t1 < t_max {
             t1
         } else {
-            return None
+            return None;
         };
 
         let pos = ray.at(t);
         let norm = offset + ray.dir * t;
 
         Some(HitResult {
-            t, 
+            t,
             norm,
             pos,
             uv: (0.0, 0.0),
@@ -42,6 +42,7 @@ impl Geometry for Sphere {
     fn bounding_box(&self) -> AABB {
         AABB::new(
             self.center + Vec3D::fill(self.radius),
-            self.center - Vec3D::fill(self.radius))
+            self.center - Vec3D::fill(self.radius),
+        )
     }
 }

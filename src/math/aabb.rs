@@ -1,4 +1,4 @@
-use math::{Vec3D, Ray};
+use math::{Ray, Vec3D};
 use std::f32;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -58,5 +58,4 @@ impl AABB {
             None
         }
     }
-
 }

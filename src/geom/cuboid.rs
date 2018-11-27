@@ -1,5 +1,5 @@
-use math::{Vec3D, AABB, Ray};
 use geom::{Geometry, HitResult};
+use math::{Ray, Vec3D, AABB};
 
 pub struct Cuboid {
     min: Vec3D,
@@ -33,14 +33,23 @@ impl Geometry for Cuboid {
         }
 
         let p = ray.at(t);
-        let normal = if false { Vec3D::zero() }
-            else if t == a[0] { -Vec3D::unit_x() }
-            else if t == a[1] { -Vec3D::unit_y() }
-            else if t == a[2] { -Vec3D::unit_z() }
-            else if t == b[0] { Vec3D::unit_x() }
-            else if t == b[1] { Vec3D::unit_y() }
-            else if t == b[2] { Vec3D::unit_z() }
-            else { unreachable!() };
+        let normal = if false {
+            Vec3D::zero()
+        } else if t == a[0] {
+            -Vec3D::unit_x()
+        } else if t == a[1] {
+            -Vec3D::unit_y()
+        } else if t == a[2] {
+            -Vec3D::unit_z()
+        } else if t == b[0] {
+            Vec3D::unit_x()
+        } else if t == b[1] {
+            Vec3D::unit_y()
+        } else if t == b[2] {
+            Vec3D::unit_z()
+        } else {
+            unreachable!()
+        };
 
         Some(HitResult {
             pos: p,

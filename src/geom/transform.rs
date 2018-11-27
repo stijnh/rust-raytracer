@@ -1,5 +1,5 @@
-use math::{Vec3D, Ray, AABB, Quaternion};
 use geom::{Geometry, HitResult};
+use math::{Quaternion, Ray, Vec3D, AABB};
 
 #[derive(PartialEq, Debug)]
 pub struct Translate<T> {
@@ -26,7 +26,7 @@ pub struct Transform<T> {
 
 impl<T: Geometry> Translate<T> {
     pub fn new(geom: T, pos: Vec3D) -> Self {
-        Self { geom, pos } 
+        Self { geom, pos }
     }
 
     pub fn translate(mut self, delta: Vec3D) -> Self {
@@ -35,7 +35,7 @@ impl<T: Geometry> Translate<T> {
     }
 }
 
-impl <T:Geometry> Geometry for Translate<T> {
+impl<T: Geometry> Geometry for Translate<T> {
     #[inline(always)]
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let new_ray = Ray::new(ray.pos - self.pos, ray.dir);
@@ -52,10 +52,7 @@ impl <T:Geometry> Geometry for Translate<T> {
     fn bounding_box(&self) -> AABB {
         let bbox = self.geom.bounding_box();
 
-        AABB::new_unchecked(
-            bbox.min + self.pos,
-            bbox.max + self.pos,
-        )
+        AABB::new_unchecked(bbox.min + self.pos, bbox.max + self.pos)
     }
 }
 
@@ -90,16 +87,16 @@ impl<T: Geometry> Geometry for Scale<T> {
     fn bounding_box(&self) -> AABB {
         let bbox = self.geom.bounding_box();
 
-        AABB::new_unchecked(
-            bbox.min * self.scale,
-            bbox.max * self.scale,
-        )
+        AABB::new_unchecked(bbox.min * self.scale, bbox.max * self.scale)
     }
 }
 
 impl<T: Geometry> Rotate<T> {
     pub fn new(geom: T) -> Self {
-        Self { geom, rotate: Quaternion::new() }
+        Self {
+            geom,
+            rotate: Quaternion::new(),
+        }
     }
 
     pub fn rotate(mut self, axis: Vec3D, angle: f32) -> Self {
@@ -159,8 +156,6 @@ impl<T: Geometry> Geometry for Rotate<T> {
         bbox
     }
 }
-
-
 
 impl<T: Geometry> Transform<T> {
     pub fn new(geom: T) -> Self {

@@ -1,5 +1,5 @@
-use math::{Vec3D, AABB, Ray, Dot};
 use geom::{Geometry, HitResult};
+use math::{Dot, Ray, Vec3D, AABB};
 
 #[derive(Debug, Constructor, PartialEq, Copy, Clone)]
 pub struct Triangle {

@@ -1,11 +1,13 @@
-use std::ops::{Neg, Add, Sub, Mul, Div, Index, IndexMut, AddAssign, SubAssign, DivAssign, MulAssign};
-use num::{Zero, One, Num, Float};
 use math::Dot;
+use num::{Float, Num, One, Zero};
 use std::fmt;
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+};
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Vec3<T> {
-    pub data: [T; 3]
+    pub data: [T; 3],
 }
 
 impl<T> Vec3<T> {
@@ -45,7 +47,10 @@ impl<T> Vec3<T> {
     }
 
     #[inline(always)]
-    pub fn from_map<F>(fun: F) -> Self where F: Fn(usize) -> T {
+    pub fn from_map<F>(fun: F) -> Self
+    where
+        F: Fn(usize) -> T,
+    {
         Self::new(fun(0), fun(1), fun(2))
     }
 }
@@ -57,18 +62,31 @@ impl<T: Clone> Vec3<T> {
     }
 
     #[inline(always)]
-    pub fn map<F, S>(&self, fun: F) -> Vec3<S> where F: Fn(T) -> S {
-        Vec3::new(fun(self[0].clone()), fun(self[1].clone()), fun(self[2].clone()))
+    pub fn map<F, S>(&self, fun: F) -> Vec3<S>
+    where
+        F: Fn(T) -> S,
+    {
+        Vec3::new(
+            fun(self[0].clone()),
+            fun(self[1].clone()),
+            fun(self[2].clone()),
+        )
     }
 
     #[inline(always)]
-    pub fn all<F>(&self, fun: F) -> bool where F: Fn(T) -> bool {
+    pub fn all<F>(&self, fun: F) -> bool
+    where
+        F: Fn(T) -> bool,
+    {
         let b = self.map(fun);
         b[0] && b[1] && b[2]
     }
 
     #[inline(always)]
-    pub fn any<F>(&self, fun: F) -> bool where F: Fn(T) -> bool {
+    pub fn any<F>(&self, fun: F) -> bool
+    where
+        F: Fn(T) -> bool,
+    {
         !self.all(|v| !fun(v))
     }
 }
@@ -105,14 +123,14 @@ impl<T: One + Zero> Vec3<T> {
     }
 }
 
-impl <T: Copy + Mul<Output=T> + Sub<Output=T>> Vec3<T> {
+impl<T: Copy + Mul<Output = T> + Sub<Output = T>> Vec3<T> {
     #[inline(always)]
     pub fn cross(&self, that: Self) -> Self {
         Vec3::new(
-             self[1] * that[2] - self[2] * that[1], 
-             self[2] * that[0] - self[0] * that[2], 
-             self[0] * that[1] - self[1] * that[0])
-
+            self[1] * that[2] - self[2] * that[1],
+            self[2] * that[0] - self[0] * that[2],
+            self[0] * that[1] - self[1] * that[0],
+        )
     }
 }
 
@@ -153,7 +171,7 @@ impl<T: Num + Float> Vec3<T> {
     }
 }
 
-impl <T: Mul<Output=T> + Add<Output=T> + Copy> Dot for Vec3<T> {
+impl<T: Mul<Output = T> + Add<Output = T> + Copy> Dot for Vec3<T> {
     type Output = <T as Add>::Output;
 
     #[inline(always)]
@@ -167,7 +185,6 @@ impl<T: fmt::Display> fmt::Display for Vec3<T> {
         write!(f, "({}, {}, {})", self[0], self[1], self[2])
     }
 }
-
 
 impl<T> From<(T, T, T)> for Vec3<T> {
     #[inline(always)]
@@ -199,7 +216,7 @@ impl<T> IndexMut<usize> for Vec3<T> {
     }
 }
 
-impl <T: Neg + Copy> Neg for Vec3<T> {
+impl<T: Neg + Copy> Neg for Vec3<T> {
     type Output = Vec3<<T as Neg>::Output>;
 
     #[inline(always)]
@@ -208,7 +225,7 @@ impl <T: Neg + Copy> Neg for Vec3<T> {
     }
 }
 
-impl <T: Add + Copy> Add for Vec3<T> {
+impl<T: Add + Copy> Add for Vec3<T> {
     type Output = Vec3<<T as Add>::Output>;
 
     #[inline(always)]
@@ -217,7 +234,7 @@ impl <T: Add + Copy> Add for Vec3<T> {
     }
 }
 
-impl <T: Sub + Copy> Sub for Vec3<T> {
+impl<T: Sub + Copy> Sub for Vec3<T> {
     type Output = Vec3<<T as Sub>::Output>;
 
     #[inline(always)]
@@ -226,7 +243,7 @@ impl <T: Sub + Copy> Sub for Vec3<T> {
     }
 }
 
-impl <T: Mul + Copy> Mul for Vec3<T> {
+impl<T: Mul + Copy> Mul for Vec3<T> {
     type Output = Vec3<<T as Mul>::Output>;
 
     #[inline(always)]
@@ -235,7 +252,7 @@ impl <T: Mul + Copy> Mul for Vec3<T> {
     }
 }
 
-impl <T: Div + Copy> Div for Vec3<T> {
+impl<T: Div + Copy> Div for Vec3<T> {
     type Output = Vec3<<T as Div>::Output>;
 
     #[inline(always)]
@@ -244,36 +261,40 @@ impl <T: Div + Copy> Div for Vec3<T> {
     }
 }
 
-impl <T: Copy, S> AddAssign<S> for Vec3<T>
-        where Vec3<T>: Add<S, Output=Vec3<T>>
-    {
+impl<T: Copy, S> AddAssign<S> for Vec3<T>
+where
+    Vec3<T>: Add<S, Output = Vec3<T>>,
+{
     #[inline(always)]
     fn add_assign(&mut self, rhs: S) {
         *self = *self + rhs;
     }
 }
 
-impl <T: Copy, S> SubAssign<S> for Vec3<T>
-        where Vec3<T>: Sub<S, Output=Vec3<T>>
-    {
+impl<T: Copy, S> SubAssign<S> for Vec3<T>
+where
+    Vec3<T>: Sub<S, Output = Vec3<T>>,
+{
     #[inline(always)]
     fn sub_assign(&mut self, rhs: S) {
         *self = *self - rhs;
     }
 }
 
-impl <T: Copy, S> MulAssign<S> for Vec3<T>
-        where Vec3<T>: Mul<S, Output=Vec3<T>>
-    {
+impl<T: Copy, S> MulAssign<S> for Vec3<T>
+where
+    Vec3<T>: Mul<S, Output = Vec3<T>>,
+{
     #[inline(always)]
     fn mul_assign(&mut self, rhs: S) {
         *self = *self * rhs;
     }
 }
 
-impl <T: Copy, S> DivAssign<S> for Vec3<T>
-        where Vec3<T>: Div<S, Output=Vec3<T>>
-    {
+impl<T: Copy, S> DivAssign<S> for Vec3<T>
+where
+    Vec3<T>: Div<S, Output = Vec3<T>>,
+{
     #[inline(always)]
     fn div_assign(&mut self, rhs: S) {
         *self = *self / rhs;

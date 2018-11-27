@@ -8,7 +8,10 @@ pub struct Ray {
 
 impl Ray {
     pub fn new(pos: Vec3D, dir: Vec3D) -> Self {
-        Ray { pos, dir: dir.normalize() }
+        Ray {
+            pos,
+            dir: dir.normalize(),
+        }
     }
 
     pub fn at(&self, t: f32) -> Vec3D {

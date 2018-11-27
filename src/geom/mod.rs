@@ -1,19 +1,19 @@
-use math::{Vec3D, Ray, AABB};
+use math::{Ray, Vec3D, AABB};
 use std::ops::Deref;
 
+mod bvh;
 mod common;
+mod cuboid;
 mod sphere;
 mod transform;
 mod triangle;
-mod cuboid;
-mod bvh;
 
-pub use self::common::{BoundingBox, GeometryList};
-pub use self::transform::{Scale, Translate, Rotate, Transform};
-pub use self::sphere::Sphere;
-pub use self::triangle::Triangle;
-pub use self::cuboid::Cuboid;
 pub use self::bvh::AABBTree;
+pub use self::common::{BoundingBox, GeometryList};
+pub use self::cuboid::Cuboid;
+pub use self::sphere::Sphere;
+pub use self::transform::{Rotate, Scale, Transform, Translate};
+pub use self::triangle::Triangle;
 
 pub struct HitResult {
     pub pos: Vec3D,
@@ -27,7 +27,7 @@ pub trait Geometry: Send + Sync {
     fn bounding_box(&self) -> AABB;
 }
 
-impl <T: Deref<Target=Geometry> + Send + Sync + ?Sized> Geometry for T {
+impl<T: Deref<Target = Geometry> + Send + Sync + ?Sized> Geometry for T {
     #[inline(always)]
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         self.deref().hit(ray, t_min, t_max)

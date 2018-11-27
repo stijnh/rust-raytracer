@@ -1,4 +1,4 @@
-use math::{Vec3D, Ray};
+use math::{Ray, Vec3D};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Camera {

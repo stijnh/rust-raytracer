@@ -1,15 +1,17 @@
-use math::{Vec3D, AABB, Ray};
 use geom::{Geometry, HitResult};
-use std::f32;
+use math::{Ray, Vec3D, AABB};
 use rand::seq::SliceRandom;
+use std::f32;
 
 pub struct AABBTree<T> {
     objs: Box<[T]>,
     nodes: Box<[(AABB, u32, u32)]>,
 }
 
-pub fn partition_bin_sah<T>(objs: &mut [T]) -> Option<usize> 
-        where T: Geometry {
+pub fn partition_bin_sah<T>(objs: &mut [T]) -> Option<usize>
+where
+    T: Geometry,
+{
     if objs.len() < 7 {
         return None;
     }
@@ -55,10 +57,16 @@ pub fn partition_bin_sah<T>(objs: &mut [T]) -> Option<usize>
             let lsize: usize = bucket_sizes[..i].iter().sum();
             let rsize: usize = bucket_sizes[i..].iter().sum();
 
-            if lsize == 0 || rsize == 0 { continue; }
+            if lsize == 0 || rsize == 0 {
+                continue;
+            }
 
-            let lbox = bucket_bbox[..i].iter().fold(AABB::empty(), |a, b| a.union(b));
-            let rbox = bucket_bbox[i..].iter().fold(AABB::empty(), |a, b| a.union(b));
+            let lbox = bucket_bbox[..i]
+                .iter()
+                .fold(AABB::empty(), |a, b| a.union(b));
+            let rbox = bucket_bbox[i..]
+                .iter()
+                .fold(AABB::empty(), |a, b| a.union(b));
 
             let cost: f32 = lsize as f32 * surface(lbox) + rsize as f32 * surface(rbox);
 
@@ -73,12 +81,12 @@ pub fn partition_bin_sah<T>(objs: &mut [T]) -> Option<usize>
     let (mut i, mut j) = (0, n);
     let (_, best_axis, best_mid) = best;
 
-    loop { 
+    loop {
         while i < n && centers[i][best_axis] >= best_mid {
             i += 1;
         }
 
-        while j > 0 && centers[j - 1][best_axis] < best_mid { 
+        while j > 0 && centers[j - 1][best_axis] < best_mid {
             j -= 1;
         }
 
@@ -94,9 +102,15 @@ pub fn partition_bin_sah<T>(objs: &mut [T]) -> Option<usize>
 }
 
 impl<T: Geometry> AABBTree<T> {
-    fn construct_node<F>(objs: &mut Vec<T>, begin: usize, end: usize, 
-            nodes: &mut Vec<(AABB, u32, u32)>, partition: &F)
-            where F: Fn(&mut[T]) -> Option<usize> {
+    fn construct_node<F>(
+        objs: &mut Vec<T>,
+        begin: usize,
+        end: usize,
+        nodes: &mut Vec<(AABB, u32, u32)>,
+        partition: &F,
+    ) where
+        F: Fn(&mut [T]) -> Option<usize>,
+    {
         let index = nodes.len();
         nodes.push((AABB::empty(), 0, 0));
 
@@ -114,8 +128,10 @@ impl<T: Geometry> AABBTree<T> {
         nodes[index] = (bbox, nodes.len() as u32, begin as u32);
     }
 
-    pub fn with_partition<F>(mut objs: Vec<T>, partition: &F) -> Self 
-            where F: Fn(&mut[T]) -> Option<usize> {
+    pub fn with_partition<F>(mut objs: Vec<T>, partition: &F) -> Self
+    where
+        F: Fn(&mut [T]) -> Option<usize>,
+    {
         let mut nodes = Vec::new();
         let n = objs.len();
         Self::construct_node(&mut objs, 0, n, &mut nodes, partition);
@@ -134,7 +150,7 @@ impl<T: Geometry> AABBTree<T> {
     }
 }
 
-impl <T: Geometry>  Geometry for AABBTree<T> {
+impl<T: Geometry> Geometry for AABBTree<T> {
     fn hit(&self, ray: &Ray, t_min: f32, mut t_max: f32) -> Option<HitResult> {
         let mut i = 0;
         let n = self.nodes.len() - 1;
@@ -147,7 +163,7 @@ impl <T: Geometry>  Geometry for AABBTree<T> {
             visitez += 1;
 
             if let Some((t0, t1)) = node.0.intersect_ray(ray) {
-                if t0 - 0.01 <= t_max && t1 + 0.01  >= t_min {
+                if t0 - 0.01 <= t_max && t1 + 0.01 >= t_min {
                     let begin = node.2 as usize;
                     let end = self.nodes[i + 1].2 as usize;
 
@@ -170,13 +186,15 @@ impl <T: Geometry>  Geometry for AABBTree<T> {
         }
 
         if visited > 0 && self.objs.len() > 2000 {
-            println!("{}/{} = {}, {}/{} = {}",
-                     visited, self.objs.len(),
-                     visited as f32/self.objs.len() as f32,
-                     visitez, self.nodes.len(),
-                     visitez as f32 / self.nodes.len() as f32,
-                     
-                     );
+            println!(
+                "{}/{} = {}, {}/{} = {}",
+                visited,
+                self.objs.len(),
+                visited as f32 / self.objs.len() as f32,
+                visitez,
+                self.nodes.len(),
+                visitez as f32 / self.nodes.len() as f32,
+            );
         }
 
         result

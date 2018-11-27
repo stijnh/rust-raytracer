@@ -1,34 +1,42 @@
-extern crate rand;
-extern crate num;
-extern crate image;
-extern crate pbr;
-extern crate rayon;
 extern crate float_ord;
-extern crate partition;
+extern crate image;
 extern crate json;
-#[macro_use] extern crate derive_more;
-#[macro_use] extern crate failure;
-#[macro_use] extern crate crunchy;
+extern crate num;
+extern crate partition;
+extern crate pbr;
+extern crate rand;
+extern crate rayon;
+#[macro_use]
+extern crate derive_more;
+#[macro_use]
+extern crate failure;
+#[macro_use]
+extern crate crunchy;
 
-#[macro_use] mod util;
-mod math;
+#[macro_use]
+mod util;
 mod camera;
-mod loader;
 mod geom;
+mod loader;
+mod math;
 
 use rayon::prelude::*;
 
-use std::env;
 use camera::Camera;
-use geom::{Sphere, Geometry, GeometryList, BoundingBox, Triangle, Transform};
 use float_ord::FloatOrd;
-use partition::partition;
-use std::sync::{Arc, Mutex};
-use loader::{load_obj, load_scene};
-use math::{vec3d, Ray, Vec3D, Dot, Quaternion};
 use geom::AABBTree;
+use geom::{BoundingBox, Geometry, GeometryList, Sphere, Transform, Triangle};
+use loader::{load_obj, load_scene};
+use math::{vec3d, Dot, Quaternion, Ray, Vec3D};
+use partition::partition;
+use std::env;
+use std::sync::{Arc, Mutex};
 
-fn divide_objects<T: 'static + Geometry + Clone>(objs: &mut [T], axis: u8, depth: u8) -> Box<dyn Geometry> {
+fn divide_objects<T: 'static + Geometry + Clone>(
+    objs: &mut [T],
+    axis: u8,
+    depth: u8,
+) -> Box<dyn Geometry> {
     let n = objs.len();
     assert!(n > 0);
 
@@ -40,11 +48,13 @@ fn divide_objects<T: 'static + Geometry + Clone>(objs: &mut [T], axis: u8, depth
         return Box::new(GeometryList::from_vec(objs.to_vec()));
     }
 
-    let mut centers: Vec<_> = objs.into_iter().map(|obj| {
-        let bb = obj.bounding_box();
-        let center = (bb.min + bb.max) / 2.0;
-        center[axis as usize]
-    }).collect();
+    let mut centers: Vec<_> = objs
+        .into_iter()
+        .map(|obj| {
+            let bb = obj.bounding_box();
+            let center = (bb.min + bb.max) / 2.0;
+            center[axis as usize]
+        }).collect();
 
     centers.sort_by_key(|f| FloatOrd(*f));
     let mid = centers[n / 2];
@@ -85,7 +95,8 @@ fn create_world() -> impl Geometry {
         .map(|t| t.bounding_box().min[1])
         .map(|f| FloatOrd(f))
         .min()
-        .unwrap().0;
+        .unwrap()
+        .0;
 
     println!("tris={}", objs.len());
 
@@ -108,8 +119,7 @@ fn create_world() -> impl Geometry {
         .scale(14.0 * 1.0 * 100.0)
         .rotate_z(0.5 * 3.14)
         .rotate_x(0.5 * 3.14)
-        .translate(vec3d(-30.0, 100.0, -300.0))
-        ;
+        .translate(vec3d(-30.0, 100.0, -300.0));
     println!("{:?}", output.bounding_box());
 
     let bunny: Arc<dyn Geometry> = Arc::new(output);
@@ -145,9 +155,10 @@ fn main() {
     world.add(create_world());
     let light = vec3d(0.0, 0.0, 1.0).normalize();
 
-
     {
-        let mut bar = Mutex::new(pbr::ProgressBar::new((width * height * subsampling * subsampling) as u64));
+        let mut bar = Mutex::new(pbr::ProgressBar::new(
+            (width * height * subsampling * subsampling) as u64,
+        ));
         let mut pixels = vec![];
 
         (0..(width * height))
@@ -158,7 +169,9 @@ fn main() {
                 let mut pixel = Vec3D::zero();
 
                 if i == 0 {
-                    bar.lock().unwrap().add((width * subsampling * subsampling) as u64);
+                    bar.lock()
+                        .unwrap()
+                        .add((width * subsampling * subsampling) as u64);
                 }
 
                 if (i, j) != (200, 200) {
@@ -185,7 +198,11 @@ fn main() {
                             f *= {
                                 let ray = Ray::new(p, vec3d(0.22, 0.22, 0.95));
                                 let hit = world.hit(&ray, 0.1, max_t);
-                                if hit.is_some() { 0.1 } else { 1.0 }
+                                if hit.is_some() {
+                                    0.1
+                                } else {
+                                    1.0
+                                }
                             };
 
                             vec3d(1.0, 1.0, 1.0) * f //* (1.0 - t / 100.0).min(1.0).max(0.0)
@@ -202,16 +219,14 @@ fn main() {
                 pixel = pixel.map(|v| min!(v, 255.0));
 
                 let data = [pixel[0] as u8, pixel[1] as u8, pixel[2] as u8];
-                Pixel{data}
-            })
-            .collect_into_vec(&mut pixels);
+                Pixel { data }
+            }).collect_into_vec(&mut pixels);
 
-
-            for (index, pixel) in pixels.into_iter().enumerate() {
-                let i = (index as u32) % width;
-                let j = (index as u32) / width;
-                img.put_pixel(i, j, pixel);
-            }
+        for (index, pixel) in pixels.into_iter().enumerate() {
+            let i = (index as u32) % width;
+            let j = (index as u32) / width;
+            img.put_pixel(i, j, pixel);
+        }
     }
 
     img.save("result.png").unwrap();

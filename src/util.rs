@@ -56,6 +56,10 @@ macro_rules! min {
 #[macro_export]
 macro_rules! iff {
     ($a:expr, $b:expr, $c:expr) => {
-        if $a { $b } else { $c }
-    }
+        if $a {
+            $b
+        } else {
+            $c
+        }
+    };
 }
