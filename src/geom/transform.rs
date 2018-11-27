@@ -75,8 +75,7 @@ impl<T: Geometry> Geometry for Scale<T> {
     #[inline(always)]
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let new_ray = Ray::new(ray.pos / self.scale, ray.dir);
-        //let (t0, t1) = (t_min / self.scale, t_max / self.scale);
-        let (t0, t1) = (t_min, t_max);
+        let (t0, t1) = (t_min / self.scale, t_max / self.scale);
 
         if let Some(mut result) = self.geom.hit(&new_ray, t0, t1) {
             result.t *= self.scale;

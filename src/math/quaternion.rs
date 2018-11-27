@@ -17,7 +17,7 @@ impl<T: Float> Quaternion<T> {
     }
 
     pub fn from_rotation(axis: Vec3<T>, angle: T) -> Self {
-        let two: T = (T::one() + T::one());
+        let two: T = T::one() + T::one();
 
         let factor = (angle / two).sin();
         let (x, y, z) = axis.map(|v| v * factor).into_tuple();

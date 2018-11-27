@@ -28,7 +28,7 @@ impl<T: Geometry> GeometryList<T> {
 
 impl<T: Geometry> Geometry for GeometryList<T> {
     fn hit(&self, ray: &Ray, t_min: f32, mut t_max: f32) -> Option<HitResult> {
-        let mut result = None;
+        let mut result: Option<HitResult> = None;
 
         for geom in self.list.iter() {
             if let Some(r) = geom.hit(ray, t_min, t_max) {

@@ -94,8 +94,8 @@ fn create_world() -> impl Geometry {
     let c = vec3d(0.5, min_y, -0.5);
     let d = vec3d(-0.5, min_y, -0.5);
 
-    objs.push(Triangle::new(a, c, b));
-    objs.push(Triangle::new(c, d, b));
+    //objs.push(Triangle::new(a, c, b));
+    //objs.push(Triangle::new(c, d, b));
 
     /*
     c   a
@@ -105,7 +105,7 @@ fn create_world() -> impl Geometry {
     //let output = divide_objects(&mut objs, 0, 0);
     let output = AABBTree::new(objs);
     let output = Transform::new(output)
-        .scale(14.0 * 2.0 * 100.0)
+        .scale(14.0 * 1.0 * 100.0)
         .rotate_z(0.5 * 3.14)
         .rotate_x(0.5 * 3.14)
         .translate(vec3d(-30.0, 100.0, -300.0))
@@ -115,13 +115,17 @@ fn create_world() -> impl Geometry {
     let bunny: Arc<dyn Geometry> = Arc::new(output);
     let mut bunnies = vec![];
 
-    for x in -5..5 {
-        let p = vec3d(0.0, x as f32 * 200.0, 0.0);
+    for x in -15..15 {
+        for y in 0..50 {
+            let p = vec3d(-y as f32 * 400.0, x as f32 * 400.0, 0.0);
 
-        bunnies.push(BoundingBox::new(Transform::new(bunny.clone()).translate(p)));
+            bunnies.push(BoundingBox::new(Transform::new(bunny.clone()).translate(p)));
+        }
     }
 
-    GeometryList::from_vec(bunnies)
+    AABBTree::new(bunnies)
+
+    //GeometryList::from_vec(bunnies)
 }
 
 fn main() {
@@ -130,7 +134,7 @@ fn main() {
 
     type Pixel = image::Rgb<u8>;
 
-    let subsampling = 1u32;
+    let subsampling = 4u32;
     let width = 800u32;
     let height = 600u32;
     let mut img = image::ImageBuffer::<Pixel, _>::new(width, height);
@@ -155,6 +159,10 @@ fn main() {
 
                 if i == 0 {
                     bar.lock().unwrap().add((width * subsampling * subsampling) as u64);
+                }
+
+                if (i, j) != (200, 200) {
+                    //return Pixel { data: [0, 0, 0] };
                 }
 
                 for a in 0..subsampling {
