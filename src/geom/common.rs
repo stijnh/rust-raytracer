@@ -14,7 +14,9 @@ impl<T: Geometry> GeometryList<T> {
     }
 
     pub fn from_vec(list: Vec<T>) -> Self {
-        GeometryList { list }
+        GeometryList { 
+            list
+        }
     }
 
     pub fn into_vec(self) -> Vec<T> {
@@ -38,6 +40,16 @@ impl<T: Geometry> Geometry for GeometryList<T> {
         }
 
         result
+    }
+
+    fn is_hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+        for geom in self.list.iter() {
+            if geom.is_hit(ray, t_min, t_max) {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn bounding_box(&self) -> AABB {
@@ -64,14 +76,24 @@ impl<T: Geometry> Geometry for BoundingBox<T> {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         if let Some((t_in, t_out)) = self.1.intersect_ray(ray) {
             if t_in <= t_max && t_out >= t_min {
-                let t0 = max!(t_in, t_min);
-                let t1 = min!(t_out, t_max);
-
-                return self.0.hit(ray, t0, t1);
+                return self.0.hit(ray, t_min, t_max);
             }
         }
 
         None
+    }
+
+    #[inline(always)]
+    fn is_hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+        if let Some((t_in, t_out)) = self.1.intersect_ray(ray) {
+            if t_in <= t_max && t_out >= t_min {
+                if self.0.is_hit(ray, t_min, t_max) {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 
     #[inline(always)]

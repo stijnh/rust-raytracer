@@ -12,7 +12,7 @@ pub struct Vec3<T> {
 
 impl<T> Vec3<T> {
     #[inline(always)]
-    pub fn new(x: T, y: T, z: T) -> Self {
+    pub const fn new(x: T, y: T, z: T) -> Self {
         Vec3 { data: [x, y, z] }
     }
 
@@ -47,9 +47,9 @@ impl<T> Vec3<T> {
     }
 
     #[inline(always)]
-    pub fn from_map<F>(fun: F) -> Self
+    pub fn from_map<F>(mut fun: F) -> Self
     where
-        F: Fn(usize) -> T,
+        F: FnMut(usize) -> T,
     {
         Self::new(fun(0), fun(1), fun(2))
     }
@@ -62,9 +62,9 @@ impl<T: Clone> Vec3<T> {
     }
 
     #[inline(always)]
-    pub fn map<F, S>(&self, fun: F) -> Vec3<S>
+    pub fn map<F, S>(&self, mut fun: F) -> Vec3<S>
     where
-        F: Fn(T) -> S,
+        F: FnMut(T) -> S,
     {
         Vec3::new(
             fun(self[0].clone()),
@@ -74,18 +74,18 @@ impl<T: Clone> Vec3<T> {
     }
 
     #[inline(always)]
-    pub fn all<F>(&self, fun: F) -> bool
+    pub fn all<F>(&self, mut fun: F) -> bool
     where
-        F: Fn(T) -> bool,
+        F: FnMut(T) -> bool,
     {
         let b = self.map(fun);
         b[0] && b[1] && b[2]
     }
 
     #[inline(always)]
-    pub fn any<F>(&self, fun: F) -> bool
+    pub fn any<F>(&self, mut fun: F) -> bool
     where
-        F: Fn(T) -> bool,
+        F: FnMut(T) -> bool,
     {
         !self.all(|v| !fun(v))
     }

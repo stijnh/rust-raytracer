@@ -1,5 +1,6 @@
 use geom::{Geometry, HitResult};
 use math::{Dot, Ray, Vec3D, AABB};
+use material::DEFAULT_MATERIAL;
 
 #[derive(Debug, Constructor, PartialEq, Copy, Clone)]
 pub struct Triangle {
@@ -9,6 +10,7 @@ pub struct Triangle {
 }
 
 impl Geometry for Triangle {
+    #[inline(always)]
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let v = self.a;
         let e1 = self.b - self.a;
@@ -29,6 +31,7 @@ impl Geometry for Triangle {
                 norm: e1.cross(e2),
                 pos: ray.at(t),
                 uv: (u, v),
+                material: &DEFAULT_MATERIAL
             })
         } else {
             None

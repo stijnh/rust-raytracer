@@ -1,3 +1,5 @@
+#![feature(const_fn)]
+
 extern crate float_ord;
 extern crate image;
 extern crate json;
@@ -19,63 +21,31 @@ mod camera;
 mod geom;
 mod loader;
 mod math;
+mod texture;
+mod scene;
+mod material;
+mod light;
 
 use rayon::prelude::*;
 
+use scene::Object;
 use camera::Camera;
 use float_ord::FloatOrd;
 use geom::AABBTree;
-use geom::{BoundingBox, Geometry, GeometryList, Sphere, Transform, Triangle};
+use geom::{BoundingBox, Geometry, GeometryList, Sphere, Transform, Triangle, Translate, Cuboid};
 use loader::{load_obj, load_scene};
 use math::{vec3d, Dot, Quaternion, Ray, Vec3D};
+use math::{cartesian_to_polar};
 use partition::partition;
 use std::env;
 use std::sync::{Arc, Mutex};
+use texture::{Texture, CheckerTexture, ImageTexture};
+use material::{Material, ReflectionMaterial, LambertianMaterial};
+use util::Color;
+use light::Light;
 
-fn divide_objects<T: 'static + Geometry + Clone>(
-    objs: &mut [T],
-    axis: u8,
-    depth: u8,
-) -> Box<dyn Geometry> {
-    let n = objs.len();
-    assert!(n > 0);
+use rand::{Rng, thread_rng};
 
-    if n == 1 {
-        return Box::new(objs[0].clone());
-    }
-
-    if n < 5 || depth > 3 {
-        return Box::new(GeometryList::from_vec(objs.to_vec()));
-    }
-
-    let mut centers: Vec<_> = objs
-        .into_iter()
-        .map(|obj| {
-            let bb = obj.bounding_box();
-            let center = (bb.min + bb.max) / 2.0;
-            center[axis as usize]
-        }).collect();
-
-    centers.sort_by_key(|f| FloatOrd(*f));
-    let mid = centers[n / 2];
-
-    let (before, after) = partition(objs, |obj| {
-        let bb = obj.bounding_box();
-        let center = (bb.min + bb.max) / 2.0;
-        center[axis as usize] < mid
-    });
-
-    if before.len() == 0 {
-        divide_objects(after, (axis + 1) % 3, depth + 1)
-    } else if after.len() == 0 {
-        divide_objects(before, (axis + 1) % 3, depth + 1)
-    } else {
-        let left = BoundingBox::new(divide_objects(before, (axis + 1) % 3, 0));
-        let right = BoundingBox::new(divide_objects(after, (axis + 1) % 3, 0));
-
-        Box::new(GeometryList::from_vec(vec![left, right]))
-    }
-}
 
 fn create_world() -> impl Geometry {
     let mut objs = vec![];
@@ -114,28 +84,138 @@ fn create_world() -> impl Geometry {
     */
 
     //let output = divide_objects(&mut objs, 0, 0);
-    let output = AABBTree::new(objs);
+    
+    //let obj = Sphere::new(Vec3D::zero(), 0.05);
+    //let objs = vec![obj];
+
+    let output = AABBTree::new(objs, 200.0);
+    output.print_stats();
+
     let output = Transform::new(output)
         .scale(14.0 * 1.0 * 100.0)
         .rotate_z(0.5 * 3.14)
         .rotate_x(0.5 * 3.14)
-        .translate(vec3d(-30.0, 100.0, -300.0));
+        //.translate(vec3d(-30.0, 100.0, -300.0))
+        ;
     println!("{:?}", output.bounding_box());
 
     let bunny: Arc<dyn Geometry> = Arc::new(output);
     let mut bunnies = vec![];
 
-    for x in -15..15 {
-        for y in 0..50 {
+    for x in -1..=1 {
+        for y in -1..=1 {
             let p = vec3d(-y as f32 * 400.0, x as f32 * 400.0, 0.0);
 
-            bunnies.push(BoundingBox::new(Transform::new(bunny.clone()).translate(p)));
+            bunnies.push(BoundingBox::new(Translate::new(bunny.clone(), p)));
         }
     }
 
-    AABBTree::new(bunnies)
+    let objs = AABBTree::new(bunnies, 100.0);
+    let bbox = objs.bounding_box();
+
+    /*
+    let a = vec3d(bbox.min[0], bbox.min[1], bbox.min[2]);
+    let b = vec3d(bbox.max[0], bbox.min[1], bbox.min[2]);
+    let c = vec3d(bbox.max[0], bbox.max[1], bbox.min[2]);
+    let d = vec3d(bbox.min[0], bbox.max[1], bbox.min[2]);
+    */
+
+    let floor = Cuboid::new(
+        bbox.min,
+       vec3d(bbox.max[0], bbox.max[1], bbox.min[2] - 250.0));
+
+    let checker = CheckerTexture::new(
+        5,
+        Color::one() * 0.9,
+        Color::one() * 0.1);
+
+    GeometryList::from_vec(vec![
+                           Object::new(
+                               Arc::new(objs) as Arc<dyn Geometry>,
+                               Arc::new(ReflectionMaterial) as Arc<dyn Material>,
+                            ),
+                           Object::new(
+                               Arc::new(floor) as Arc<dyn Geometry>,
+                               Arc::new(LambertianMaterial::new(checker)) as Arc<dyn Material>,
+                            ),
+    ])
+
+
 
     //GeometryList::from_vec(bunnies)
+}
+
+fn random_in_sphere() -> Vec3D {
+    let mut random = thread_rng();
+
+    loop {
+        let mut p = Vec3D::zero();
+
+        for i in 0..3 {
+            p[i] = random.gen::<f32>() * iff!(random.gen::<bool>(), -1.0, 1.0);
+        }
+
+        if p.dot(p) < 1.0 {
+            break p;
+        }
+    }
+}
+
+fn illumunation(mut ray: Ray, world: &Geometry, lights: &[Light], skybox: &Texture) -> Color {
+    let mut random = thread_rng();
+    let mut pixel = Color::zero();
+    let mut passthrough = Color::one();
+    let mut bounces_left = 10;
+
+    while !passthrough.is_zero() {
+        let result = if bounces_left > 0 {
+            bounces_left -= 1;
+            world.hit(&ray, 0.0, 100000.0)
+        } else {
+            None
+        };
+
+        if let Some(hit) = result {
+            let normal = hit.norm.normalize();
+            let (l, r) = hit.material.get(hit.uv);
+            let mut ill = Vec3D::zero();
+
+            for light in lights {
+                let mut rays_total = 0;
+                let mut rays_hit = 0;
+                let mut val = Vec3D::zero();
+
+                loop {
+                    let (r, t_min, t_max) = light.generate_ray(hit.pos, &mut random);
+                    rays_total += 1;
+
+                    if !world.is_hit(&r, t_min, t_max) {
+                        val += r.dir.dot(normal).abs();
+                        rays_hit += 1
+                    }
+
+                    if rays_total == 500 || (rays_total == 20 && (rays_hit == 0 || rays_hit == rays_total)) {
+                        break;
+                    }
+                }
+
+                ill += val / (rays_total as f32);
+            }
+
+            pixel += ill * passthrough * l;
+            passthrough *= r;
+
+            ray.dir -= 2.0 * ray.dir.dot(normal) * normal;
+            ray.pos = hit.pos + ray.dir * 0.01;
+        } else {
+            let (s, c) = cartesian_to_polar(ray.dir);
+            let (u, v) = (s / (2.0 * 3.14), c / 3.14);
+            pixel += passthrough * skybox.color_at(u, v);
+            break
+        }
+    }
+
+    pixel
 }
 
 fn main() {
@@ -144,16 +224,26 @@ fn main() {
 
     type Pixel = image::Rgb<u8>;
 
-    let subsampling = 4u32;
-    let width = 800u32;
-    let height = 600u32;
+    let subsampling = 3u32;
+    let width = 800u32 * 2;
+    let height = 600u32 * 2;
+    let shadow_minor_samples = 25;
+    let shadow_major_samples = 250;
     let mut img = image::ImageBuffer::<Pixel, _>::new(width, height);
 
     let cam = cam.perspective(100.0, width as f32, height as f32);
 
+    let texture: Arc<dyn Texture + Sync + Send> = Arc::new(Vec3D::one());
+    //let texture = Arc::new(UVTexture);
+    let skybox = Arc::new(ImageTexture::from_filename("skybox.jpg").unwrap());
+
     let mut world = GeometryList::new();
     world.add(create_world());
-    let light = vec3d(0.0, 0.0, 1.0).normalize();
+
+    let lights = vec![
+        Light::new(Vec3D::new(0.0, 0.0, 1000.0), 100.0)
+    ];
+
 
     {
         let mut bar = Mutex::new(pbr::ProgressBar::new(
@@ -165,7 +255,7 @@ fn main() {
             .into_par_iter()
             .map(move |index| {
                 let i = index % width;
-                let j = index / width;
+                let j = (height - 1) - index / width;
                 let mut pixel = Vec3D::zero();
 
                 if i == 0 {
@@ -182,35 +272,73 @@ fn main() {
                     for b in 0..subsampling {
                         let x = (i as f32) + (a as f32 / subsampling as f32);
                         let y = (j as f32) + (b as f32 / subsampling as f32);
-                        let ray = cam.ray_at(x, y);
+                        let mut ray = cam.ray_at(x, y);
 
+                        pixel += illumunation(
+                            ray,
+                            &world,
+                            &lights,
+                            &*skybox);
+
+                        /*
                         let max_t = 1e12;
-                        let hit = world.hit(&ray, 0.0, max_t);
+                        let mut depth = 0;
 
-                        let p = if let Some(result) = hit {
-                            let normal = result.norm.normalize();
-                            let mut f = normal.dot(light).max(0.1);
+                        let mut p = Vec3D::zero();
+                        let mut thorough = Vec3D::one();
 
-                            let p = ray.pos + result.t * ray.dir;
-                            let mut samples_total = 0;
-                            let mut samples_hit = 0;
-
-                            f *= {
-                                let ray = Ray::new(p, vec3d(0.22, 0.22, 0.95));
-                                let hit = world.hit(&ray, 0.1, max_t);
-                                if hit.is_some() {
-                                    0.1
-                                } else {
-                                    1.0
-                                }
+                        loop {
+                            let hit = if depth < 5 {
+                                depth += 1;
+                                world.hit(&ray, 0.0, max_t)
+                            } else {
+                                None
                             };
 
-                            vec3d(1.0, 1.0, 1.0) * f //* (1.0 - t / 100.0).min(1.0).max(0.0)
-                        } else {
-                            vec3d(0.0, 0.0, 0.0)
-                        };
+                            if let Some(result) = hit {
+                                let normal = result.norm.normalize();
+                                let mut shadow_hits = 0;
+                                let mut shadow_tries = 0;
 
-                        pixel += p;
+                                for _ in 0..shadow_major_samples {
+                                    if shadow_tries == shadow_minor_samples {
+                                        if shadow_hits == 0 || shadow_hits == shadow_tries {
+                                            break;
+                                        }
+                                    }
+
+                                    let shadow_dir = (light + random_in_sphere() * 0.5).normalize();
+                                    let shadow_ray = Ray::new(result.pos, shadow_dir);
+                                    
+                                    if !world.is_hit(&shadow_ray, 0.01, max_t) {
+                                        shadow_hits += 1;
+                                    }
+
+                                    shadow_tries += 1;
+                                }
+
+                                let light_frac = shadow_hits as f32 / shadow_tries as f32;
+
+                                if true || normal.dot(Vec3D::unit_z()).abs() < 0.99 {
+                                    p += thorough * 0.5 * normal.dot(light).abs() * light_frac;
+                                    thorough *= 0.5;
+                                } else {
+                                    p += thorough * normal.dot(light).abs() * light_frac;
+                                    thorough *= 0.0;
+                                }
+                                
+                                let d = ray.dir - 2.0 * ray.dir.dot(normal) * normal;
+                                let real_d = (50.0 * d + 0.0*random_in_sphere()).normalize();
+
+                                let p = ray.pos + result.t * ray.dir + real_d * 0.01;
+
+                                ray = Ray::new(p, real_d)
+                            } else {
+                                break
+                            }
+                        };
+                        */
+
                     }
                 }
 

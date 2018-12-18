@@ -1,5 +1,6 @@
 use math::{Ray, Vec3D};
 use std::f32;
+use std::mem::swap;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AABB {
@@ -45,12 +46,40 @@ impl AABB {
         }
     }
 
+    pub fn surface(&self) -> f32 {
+        let delta = self.max - self.min;
+        delta[0] * delta[1] + delta[1] * delta[2] + delta[2] * delta[0]
+    }
+
     pub fn intersect_ray(&self, ray: &Ray) -> Option<(f32, f32)> {
         let a = (self.min - ray.pos) / ray.dir;
         let b = (self.max - ray.pos) / ray.dir;
 
         let t0 = max!(min!(a[0], b[0]), min!(a[1], b[1]), min!(a[2], b[2]));
         let t1 = min!(max!(a[0], b[0]), max!(a[1], b[1]), max!(a[2], b[2]));
+
+        if t0 < t1 {
+            Some((t0, t1))
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub fn fast_intersect_ray(&self, ray: &Ray, inv_ray_dir: Vec3D, neg_ray_dir: [bool; 3]) -> Option<(f32, f32)> {
+        let mut a = (self.min - ray.pos) * inv_ray_dir;
+        let mut b = (self.max - ray.pos) * inv_ray_dir;
+
+        unroll! {
+            for i in 0..3 {
+                if neg_ray_dir[i] {
+                    swap(&mut a[i], &mut b[i])
+                }
+            }
+        };
+
+        let t0 = max!(a[0], a[1], a[2]);
+        let t1 = min!(b[0], b[1], b[2]);
 
         if t0 < t1 {
             Some((t0, t1))

@@ -1,3 +1,5 @@
+use math::Vec3;
+
 #[macro_export]
 macro_rules! raise {
     ($x:expr) => {
@@ -63,3 +65,11 @@ macro_rules! iff {
         }
     };
 }
+
+pub type Color = Vec3<f32>;
+
+pub const COLOR_WHITE: Color = Color::new(1.0, 1.0, 1.0);
+pub const COLOR_BLACK: Color = Color::new(0.0, 0.0, 0.0);
+pub const COLOR_RED: Color = Color::new(1.0, 0.0, 0.0);
+pub const COLOR_GREEN: Color = Color::new(0.0, 1.0, 0.0);
+pub const COLOR_BLUE: Color = Color::new(0.0, 0.0, 1.0);

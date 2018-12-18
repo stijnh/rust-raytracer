@@ -49,6 +49,12 @@ impl<T: Geometry> Geometry for Translate<T> {
     }
 
     #[inline(always)]
+    fn is_hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+        let new_ray = Ray::new(ray.pos - self.pos, ray.dir);
+        self.geom.is_hit(&new_ray, t_min, t_max)
+    }
+
+    #[inline(always)]
     fn bounding_box(&self) -> AABB {
         let bbox = self.geom.bounding_box();
 
@@ -81,6 +87,14 @@ impl<T: Geometry> Geometry for Scale<T> {
         } else {
             None
         }
+    }
+
+    #[inline(always)]
+    fn is_hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+        let new_ray = Ray::new(ray.pos / self.scale, ray.dir);
+        let (t0, t1) = (t_min / self.scale, t_max / self.scale);
+
+        self.geom.is_hit(&new_ray, t0, t1)
     }
 
     #[inline(always)]
@@ -132,6 +146,15 @@ impl<T: Geometry> Geometry for Rotate<T> {
         } else {
             None
         }
+    }
+
+    #[inline(always)]
+    fn is_hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+        let p = self.rotate.inverse_apply(ray.pos);
+        let d = self.rotate.inverse_apply(ray.dir);
+        let new_ray = Ray::new(p, d);
+
+        self.geom.is_hit(&new_ray, t_min, t_max)
     }
 
     #[inline(always)]
@@ -201,6 +224,11 @@ impl<T: Geometry> Geometry for Transform<T> {
     #[inline(always)]
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         self.geom.hit(ray, t_min, t_max)
+    }
+
+    #[inline(always)]
+    fn is_hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+        self.geom.is_hit(ray, t_min, t_max)
     }
 
     #[inline(always)]

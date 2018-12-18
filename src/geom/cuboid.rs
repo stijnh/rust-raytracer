@@ -1,5 +1,6 @@
 use geom::{Geometry, HitResult};
 use math::{Ray, Vec3D, AABB};
+use material::DEFAULT_MATERIAL;
 
 pub struct Cuboid {
     min: Vec3D,
@@ -33,20 +34,22 @@ impl Geometry for Cuboid {
         }
 
         let p = ray.at(t);
-        let normal = if false {
-            Vec3D::zero()
+        let q = (p - self.min) / (self.max - self.min);
+
+        let (normal, uv) = if false {
+            unreachable!()
         } else if t == a[0] {
-            -Vec3D::unit_x()
+            (-Vec3D::unit_x(), (q[1], q[2]))
         } else if t == a[1] {
-            -Vec3D::unit_y()
+            (-Vec3D::unit_y(), (q[0], q[2]))
         } else if t == a[2] {
-            -Vec3D::unit_z()
+            (-Vec3D::unit_z(), (q[0], q[1]))
         } else if t == b[0] {
-            Vec3D::unit_x()
+            (Vec3D::unit_x(), (q[1], q[2]))
         } else if t == b[1] {
-            Vec3D::unit_y()
+            (Vec3D::unit_y(), (q[0], q[2]))
         } else if t == b[2] {
-            Vec3D::unit_z()
+            (Vec3D::unit_z(), (q[0], q[1]))
         } else {
             unreachable!()
         };
@@ -55,7 +58,8 @@ impl Geometry for Cuboid {
             pos: p,
             norm: normal,
             t: t,
-            uv: (0.0, 0.0),
+            uv: uv,
+            material: &DEFAULT_MATERIAL
         })
     }
 

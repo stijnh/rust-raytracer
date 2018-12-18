@@ -1,5 +1,7 @@
 use geom::{Geometry, HitResult};
 use math::{Dot, Ray, Vec3D, AABB};
+use material::DEFAULT_MATERIAL;
+use std::f32::consts::PI;
 
 #[derive(Debug, PartialEq, Constructor)]
 pub struct Sphere {
@@ -29,13 +31,18 @@ impl Geometry for Sphere {
         };
 
         let pos = ray.at(t);
-        let norm = offset + ray.dir * t;
+        let norm = (offset + ray.dir * t).normalize();
+
+        let u = norm[0].atan2(norm[1]) / PI * 0.5 + 0.5;
+        let v = norm[2].acos() / PI;
+
 
         Some(HitResult {
             t,
             norm,
             pos,
-            uv: (0.0, 0.0),
+            uv: (u, v),
+            material: &DEFAULT_MATERIAL,
         })
     }
 
