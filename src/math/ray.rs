@@ -1,6 +1,6 @@
-use math::Vec3D;
+use super::Vec3D;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Ray {
     pub pos: Vec3D,
     pub dir: Vec3D,
@@ -8,13 +8,10 @@ pub struct Ray {
 
 impl Ray {
     pub fn new(pos: Vec3D, dir: Vec3D) -> Self {
-        Ray {
-            pos,
-            dir: dir.normalize(),
-        }
+        Self { pos, dir }
     }
 
     pub fn at(&self, t: f32) -> Vec3D {
-        self.pos + self.dir * t
+        self.pos + Vec3D::fill(t) * self.dir
     }
 }

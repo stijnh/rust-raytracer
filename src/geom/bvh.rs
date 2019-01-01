@@ -1,6 +1,5 @@
-use geom::{Geometry, HitResult};
-use math::{Ray, Vec3D, AABB};
-use rand::seq::SliceRandom;
+use crate::geom::{Geometry, HitResult};
+use crate::math::*;
 use std::f32;
 
 pub struct AABBTree<T> {
@@ -8,7 +7,7 @@ pub struct AABBTree<T> {
     nodes: Box<[(AABB, u32, u32)]>,
 }
 
-pub fn partition_bin_sah<T>(bbox: &mut [AABB], objs: &mut [T]) -> Option<usize>
+pub fn partition_sah<T>(bbox: &mut [AABB], objs: &mut [T]) -> Option<usize>
 where
     T: Geometry,
 {
@@ -19,7 +18,7 @@ where
 
     let mut centers = bbox
         .iter()
-        .map(|b| (b.min + b.max) / 2.0)
+        .map(|b| (b.min + b.max) * 0.5)
         .collect::<Vec<_>>();
 
     let mut best = (f32::INFINITY, 0, 0.0);
@@ -32,16 +31,16 @@ where
             max = max!(max, c[axis]);
         }
 
-        const NUM_BUCKETS: usize = 10;
+        const NUM_BUCKETS: usize = 16;
         let mut bucket_sizes = [0; NUM_BUCKETS];
-        let mut bucket_bbox = [AABB::empty(); NUM_BUCKETS];
+        let mut bucket_bbox = [AABB::new(); NUM_BUCKETS];
 
         for (c, b) in centers.iter().zip(bbox.iter()) {
             let ratio = (c[axis] - min) / (max - min);
             let index = ((ratio * NUM_BUCKETS as f32).floor() as usize).min(NUM_BUCKETS - 1);
 
             bucket_sizes[index] += 1;
-            bucket_bbox[index] = bucket_bbox[index].union(b);
+            bucket_bbox[index] = AABB::union(bucket_bbox[index], *b);
         }
 
         for i in 1..NUM_BUCKETS {
@@ -52,12 +51,16 @@ where
                 continue;
             }
 
-            let lbox = bucket_bbox[..i]
-                .iter()
-                .fold(AABB::empty(), |a, b| a.union(b));
-            let rbox = bucket_bbox[i..]
-                .iter()
-                .fold(AABB::empty(), |a, b| a.union(b));
+            let mut lbox = AABB::new();
+            let mut rbox = AABB::new();
+
+            for &b in &bucket_bbox[..i] {
+                lbox = lbox.union(b);
+            }
+
+            for &b in &bucket_bbox[i..] {
+                rbox = rbox.union(b);
+            }
 
             let cost: f32 = lsize as f32 * surface(lbox) + rsize as f32 * surface(rbox);
 
@@ -105,12 +108,12 @@ impl<T: Geometry> AABBTree<T> {
     ) where
         F: Fn(&mut [AABB], &mut [T]) -> Option<usize>,
     {
-        let index = nodes.len();
         let bb = bbox[begin..end]
             .iter()
-            .fold(AABB::empty(), |a, b| a.union(&b));
+            .fold(AABB::new(), |a, &b| a.union(b));
 
-        nodes.push((bb, !0 as u32, begin as u32));
+        let index = nodes.len();
+        nodes.push((AABB::new(), !0 as u32, !0 as u32));
 
         if let Some(len) = partition(&mut bbox[begin..end], &mut objs[begin..end]) {
             let mid = begin + len;
@@ -120,17 +123,17 @@ impl<T: Geometry> AABBTree<T> {
             if lsize > 0 && rsize > 0 {
                 let lsurface = bbox[begin..mid]
                     .iter()
-                    .fold(AABB::empty(), |a, b| a.union(&b))
-                    .surface();
+                    .fold(AABB::new(), |a, &b| a.union(b))
+                    .surface_area();
 
                 let rsurface = bbox[begin..mid]
                     .iter()
-                    .fold(AABB::empty(), |a, b| a.union(&b))
-                    .surface();
+                    .fold(AABB::new(), |a, &b| a.union(b))
+                    .surface_area();
 
-                let surface = bb.surface();
+                let surface = bb.surface_area();
 
-                let split_cost = 1.0 
+                let split_cost = 1.0
                     + hit_cost * (lsurface / surface) * (lsize as f32)
                     + hit_cost * (rsurface / surface) * (rsize as f32);
                 let nosplit_cost = hit_cost * (lsize + rsize) as f32;
@@ -142,7 +145,7 @@ impl<T: Geometry> AABBTree<T> {
             }
         }
 
-        nodes[index].1 = nodes.len() as u32
+        nodes[index] = (bb, nodes.len() as u32, begin as u32);
     }
 
     pub fn with_partition<F>(mut objs: Vec<T>, partition: &F, hit_cost: f32) -> Self
@@ -159,7 +162,7 @@ impl<T: Geometry> AABBTree<T> {
         Self::construct_node(&mut bbox, &mut objs, 0, n, &mut nodes, partition, hit_cost);
 
         let m = nodes.len();
-        nodes.push((AABB::empty(), m as u32, n as u32));
+        nodes.push((AABB::new(), m as u32, n as u32));
 
         AABBTree {
             objs: objs.into_boxed_slice(),
@@ -168,7 +171,7 @@ impl<T: Geometry> AABBTree<T> {
     }
 
     pub fn new(objs: Vec<T>, hit_cost: f32) -> Self {
-        Self::with_partition(objs, &partition_bin_sah, hit_cost)
+        Self::with_partition(objs, &partition_sah, hit_cost)
     }
 
     pub fn print_stats(&self) {
@@ -187,33 +190,53 @@ impl<T: Geometry> AABBTree<T> {
             }
         }
 
-        println!("BVH statistics: {} objs, {} nodes, {} leafs, min/max/avg leaf: {}/{}/{}",
-                 self.objs.len(), self.nodes.len(), num_leaf, min_leaf, max_leaf, 
-                 (self.objs.len() as f32) / (num_leaf as f32));
+        println!(
+            "BVH statistics: {} objs, {} nodes, {} leafs, min/max/avg leaf: {}/{}/{}",
+            self.objs.len(),
+            self.nodes.len(),
+            num_leaf,
+            min_leaf,
+            max_leaf,
+            (self.objs.len() as f32) / (num_leaf as f32)
+        );
     }
 
     #[inline(always)]
-    fn traverse<'a, F, R>(&'a self, ray: &Ray, t_min: f32, mut t_max: f32, fun: F) -> Option<R>
-        where F: Fn(&'a T, &Ray, f32, f32) -> Option<(f32, R)>
+    fn traverse<'a, F, R>(
+        &'a self,
+        ray: &Ray,
+        mut t_max: f32,
+        exit_immediate: bool,
+        fun: F,
+    ) -> Option<R>
+    where
+        F: Fn(&'a T, &Ray, &mut f32) -> Option<R>,
     {
         let mut i = 0;
         let n = self.nodes.len() - 1;
         let mut result = None;
         let ray_inv_dir = 1.0 / ray.dir;
-        let ray_neg_dir = ray.dir.map(|v| v.is_sign_negative()).into_array();
+        let ray_neg_dir = [
+            ray_inv_dir[0].is_sign_negative(),
+            ray_inv_dir[1].is_sign_negative(),
+            ray_inv_dir[2].is_sign_negative(),
+        ];
 
         while i < n {
             let node = &self.nodes[i];
 
-            if let Some((t0, t1)) = node.0.fast_intersect_ray(ray, ray_inv_dir, ray_neg_dir) {
-                if t0 - 0.01 <= t_max && t1 + 0.01 >= t_min {
+            if let Some((t0, t1)) = node.0.fast_intersect_ray(ray.pos, ray_inv_dir, ray_neg_dir) {
+                if t0 <= t_max + 0.01 && t1 >= -0.01 {
                     let begin = node.2 as usize;
                     let end = self.nodes[i + 1].2 as usize;
 
                     for obj in &self.objs[begin..end] {
-                        if let Some((t, r)) = fun(obj, ray, t_min, t_max) {
-                            t_max = t;
+                        if let Some(r) = fun(obj, ray, &mut t_max) {
                             result = Some(r);
+
+                            if exit_immediate {
+                                return result;
+                            }
                         }
                     }
 
@@ -232,10 +255,11 @@ impl<T: Geometry> AABBTree<T> {
 
 impl<T: Geometry> Geometry for AABBTree<T> {
     #[inline(never)]
-    fn hit(&self, ray: &Ray, t_min: f32, mut t_max: f32) -> Option<HitResult> {
-        self.traverse(ray, t_min, t_max, |obj, ray, t_min, t_max| {
-            if let Some(hit) = obj.hit(ray, t_min, t_max) {
-                Some((hit.t, hit))
+    fn hit(&self, ray: &Ray, t_max: f32) -> Option<HitResult> {
+        self.traverse(ray, t_max, false, |obj, ray, t_max| {
+            if let Some(hit) = obj.hit(ray, *t_max) {
+                *t_max = hit.t;
+                Some(hit)
             } else {
                 None
             }
@@ -243,14 +267,15 @@ impl<T: Geometry> Geometry for AABBTree<T> {
     }
 
     #[inline(never)]
-    fn is_hit(&self, ray: &Ray, t_min: f32, mut t_max: f32) -> bool {
-        self.traverse(ray, t_min, t_max, |obj, ray, t_min, t_max| {
-            if obj.is_hit(ray, t_min, t_max) {
-                Some((t_min, ()))
+    fn is_hit(&self, ray: &Ray, t_max: f32) -> bool {
+        self.traverse(ray, t_max, true, |obj, ray, t_max| {
+            if obj.is_hit(ray, *t_max) {
+                Some(())
             } else {
                 None
             }
-        }).is_some()
+        })
+        .is_some()
     }
 
     fn bounding_box(&self) -> AABB {

@@ -1,56 +1,50 @@
-use math::{Ray, Vec3D};
-use std::f32;
+use super::{Ray, Vec3D};
+use crunchy::unroll;
 use std::mem::swap;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct AABB {
     pub min: Vec3D,
     pub max: Vec3D,
 }
 
 impl AABB {
-    #[inline(always)]
-    pub fn new(a: Vec3D, b: Vec3D) -> Self {
+    pub fn new() -> Self {
         AABB {
-            min: Vec3D::from_map(|i| min!(a[i], b[i])),
-            max: Vec3D::from_map(|i| max!(a[i], b[i])),
+            min: Vec3D::fill(std::f32::INFINITY),
+            max: Vec3D::fill(std::f32::NEG_INFINITY),
         }
     }
 
-    #[inline(always)]
-    pub fn new_unchecked(min: Vec3D, max: Vec3D) -> Self {
-        AABB { min, max }
+    pub fn from_point(p: Vec3D) -> Self {
+        AABB { min: p, max: p }
     }
 
-    #[inline(always)]
-    pub fn empty() -> Self {
+    pub fn from_points(p: Vec3D, q: Vec3D) -> Self {
+        Self::from_point(p).union_point(q)
+    }
+
+    pub fn from_min_max(min: Vec3D, max: Vec3D) -> Self {
+        Self { min, max }
+    }
+
+    pub fn union(self, other: Self) -> Self {
         AABB {
-            min: Vec3D::fill(f32::INFINITY),
-            max: Vec3D::fill(-f32::INFINITY),
+            min: Vec3D::from_map(move |i| min!(self.min[i], other.min[i])),
+            max: Vec3D::from_map(move |i| max!(self.max[i], other.max[i])),
         }
     }
 
-    #[inline(always)]
-    pub fn union(&self, other: &Self) -> Self {
-        AABB {
-            min: Vec3D::from_map(|i| min!(self.min[i], other.min[i])),
-            max: Vec3D::from_map(|i| max!(self.max[i], other.max[i])),
-        }
+    pub fn union_point(self, p: Vec3D) -> Self {
+        self.union(Self::from_point(p))
+    }
+
+    pub fn surface_area(&self) -> f32 {
+        let d = self.max - self.min;
+        2.0 * (d[0] * d[1] + d[1] * d[2] + d[2] * d[0])
     }
 
     #[inline(always)]
-    pub fn union_point(&self, point: Vec3D) -> Self {
-        AABB {
-            min: Vec3D::from_map(|i| min!(self.min[i], point[i])),
-            max: Vec3D::from_map(|i| max!(self.max[i], point[i])),
-        }
-    }
-
-    pub fn surface(&self) -> f32 {
-        let delta = self.max - self.min;
-        delta[0] * delta[1] + delta[1] * delta[2] + delta[2] * delta[0]
-    }
-
     pub fn intersect_ray(&self, ray: &Ray) -> Option<(f32, f32)> {
         let a = (self.min - ray.pos) / ray.dir;
         let b = (self.max - ray.pos) / ray.dir;
@@ -66,9 +60,14 @@ impl AABB {
     }
 
     #[inline(always)]
-    pub fn fast_intersect_ray(&self, ray: &Ray, inv_ray_dir: Vec3D, neg_ray_dir: [bool; 3]) -> Option<(f32, f32)> {
-        let mut a = (self.min - ray.pos) * inv_ray_dir;
-        let mut b = (self.max - ray.pos) * inv_ray_dir;
+    pub fn fast_intersect_ray(
+        &self,
+        ray_pos: Vec3D,
+        inv_ray_dir: Vec3D,
+        neg_ray_dir: [bool; 3],
+    ) -> Option<(f32, f32)> {
+        let mut a = (self.min - ray_pos) * inv_ray_dir;
+        let mut b = (self.max - ray_pos) * inv_ray_dir;
 
         unroll! {
             for i in 0..3 {

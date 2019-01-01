@@ -1,30 +1,22 @@
-use num::{Float, One, Zero};
-use std::ops::{Index, IndexMut, Mul};
-
-use math::{Dot, Vec3};
+use super::Vec3D;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-pub struct Quaternion<T> {
-    data: [T; 4],
+pub struct Quaternion {
+    data: [f32; 4],
 }
 
-impl<T: Float> Quaternion<T> {
+impl Quaternion {
     pub fn new() -> Self {
-        let zero = Zero::zero();
-        let one = One::one();
-
         Self {
-            data: [one, zero, zero, zero],
+            data: [1.0, 0.0, 0.0, 0.0],
         }
     }
 
-    pub fn from_rotation(axis: Vec3<T>, angle: T) -> Self {
-        let two: T = T::one() + T::one();
+    pub fn from_rotation(axis: Vec3D, angle: f32) -> Self {
+        let factor = (angle / 2.0).sin();
+        let [x, y, z]: [f32; 3] = axis.map(|v| v * factor).into();
 
-        let factor = (angle / two).sin();
-        let (x, y, z) = axis.map(|v| v * factor).into_tuple();
-
-        let w = (angle / two).cos();
+        let w = (angle / 2.0).cos();
         let norm = (x * x + y * y + z * z + w * w).sqrt();
 
         Quaternion {
@@ -46,8 +38,7 @@ impl<T: Float> Quaternion<T> {
     }
 
     #[inline(always)]
-    pub fn apply(&self, v: Vec3<T>) -> Vec3<T> {
-        let one = T::one();
+    pub fn apply(&self, v: Vec3D) -> Vec3D {
         let this = self.data;
 
         let num12 = this[1] + this[1];
@@ -67,13 +58,13 @@ impl<T: Float> Quaternion<T> {
         let num3 = this[3] * num;
 
         let num15 =
-            ((v[0] * ((one - num5) - num3)) + (v[1] * (num7 - num9))) + (v[2] * (num6 + num10));
+            ((v[0] * ((1.0 - num5) - num3)) + (v[1] * (num7 - num9))) + (v[2] * (num6 + num10));
         let num14 =
-            ((v[0] * (num7 + num9)) + (v[1] * ((one - num8) - num3))) + (v[2] * (num4 - num11));
+            ((v[0] * (num7 + num9)) + (v[1] * ((1.0 - num8) - num3))) + (v[2] * (num4 - num11));
         let num13 =
-            ((v[0] * (num6 - num10)) + (v[1] * (num4 + num11))) + (v[2] * ((one - num8) - num5));
+            ((v[0] * (num6 - num10)) + (v[1] * (num4 + num11))) + (v[2] * ((1.0 - num8) - num5));
 
-        Vec3::new(num15, num14, num13)
+        Vec3D::new(num15, num14, num13)
     }
 
     #[inline(always)]
@@ -85,7 +76,7 @@ impl<T: Float> Quaternion<T> {
     }
 
     #[inline(always)]
-    pub fn inverse_apply(&self, v: Vec3<T>) -> Vec3<T> {
+    pub fn inverse_apply(&self, v: Vec3D) -> Vec3D {
         self.inverse().apply(v)
     }
 }
