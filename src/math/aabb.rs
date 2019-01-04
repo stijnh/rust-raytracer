@@ -44,10 +44,9 @@ impl AABB {
         2.0 * (d[0] * d[1] + d[1] * d[2] + d[2] * d[0])
     }
 
-    #[inline(always)]
     pub fn intersect_ray(&self, ray: &Ray) -> Option<(f32, f32)> {
-        let a = (self.min - ray.pos) / ray.dir;
-        let b = (self.max - ray.pos) / ray.dir;
+        let a = (self.min - ray.pos) * ray.inv_dir;
+        let b = (self.max - ray.pos) * ray.inv_dir;
 
         let t0 = max!(min!(a[0], b[0]), min!(a[1], b[1]), min!(a[2], b[2]));
         let t1 = min!(max!(a[0], b[0]), max!(a[1], b[1]), max!(a[2], b[2]));
