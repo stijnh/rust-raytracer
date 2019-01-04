@@ -38,7 +38,7 @@ impl Geometry for UnitSphere {
 
         let t = if t0 > t_max || t1 < 0.0 {
             return None;
-        } else if t0 <= 0.0 {
+        } else if t0 >= 0.0 {
             t0
         } else {
             t1
@@ -59,6 +59,7 @@ impl Geometry for UnitSphere {
         })
     }
 
+    #[inline(never)]
     fn is_hit(&self, ray: &Ray, t_max: f32) -> bool {
         if let Some((t0, t1)) = sphere_intersect(ray) {
             t0 <= t_max && t1 >= 0.0
