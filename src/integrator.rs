@@ -1,7 +1,9 @@
 use crate::math::*;
-use crate::scene::{Light, Scene};
+use crate::scene::Scene;
+use crate::light::Light;
 use crate::texture::Color;
 use std::f32;
+use rand::prelude::*;
 
 pub struct WhittedIntegrator {
     pub max_depth: i32,
@@ -23,6 +25,7 @@ impl WhittedIntegrator {
     pub fn calculate_pixel(&self, scene: &Scene, cx: usize, cy: usize) -> Color {
         let n = self.antialiasing;
         let mut pixel = Vec3D::zero();
+        let mut rng = StdRng::seed_from_u64(0);
 
         for i in 0..n {
             for j in 0..n {
@@ -30,14 +33,15 @@ impl WhittedIntegrator {
                 let y = (cy as f32) + (j as f32 + 0.5) / n as f32 - 0.5;
 
                 let ray = scene.camera.generate_ray(x, y);
-                pixel += self.integrate_recur(scene, &ray, 0);
+                pixel += self.integrate_recur(scene, &ray, 0, &mut rng);
+
             }
         }
 
-        (pixel / (n as f32 * n as f32)) //.map(|x| x.powf(1.0 / self.gamma))
+        (pixel / (n as f32 * n as f32)).map(|x| x.powf(1.0 / self.gamma))
     }
 
-    fn integrate_recur(&self, scene: &Scene, ray: &Ray, depth: i32) -> Color {
+    fn integrate_recur(&self, scene: &Scene, ray: &Ray, depth: i32, rng: &mut StdRng) -> Color {
         if depth >= self.max_depth {
             return scene.calculate_background(ray);
         }
@@ -47,6 +51,7 @@ impl WhittedIntegrator {
             None => return scene.calculate_background(ray),
         };
 
+
         let [u, v] = hit.uv;
         let attenuation = hit.material.texture.color_at(u, v);
 
@@ -55,38 +60,26 @@ impl WhittedIntegrator {
         let mut illumination = Vec3D::zero();
 
         for light in &scene.lights {
-            illumination += self.illumination(scene, light, p, n);
+            illumination += self.illumination(scene, &**light, p, n, rng);
         }
 
         illumination * attenuation
     }
 
-    fn illumination(&self, scene: &Scene, light: &Light, pos: Vec3D, normal: Vec3D) -> Vec3D {
-        match light {
-            &Light::Ambient(em) => em,
-            &Light::Point(em, lp, _) => {
-                let offset = lp - pos;
-                let dist = offset.norm();
-                let dir = offset / dist;
-                let ray = Ray::new(pos, dir);
-                let cos = Vec3D::dot(dir, normal);
+    fn illumination(&self, scene: &Scene, light: &dyn Light, pos: Vec3D, normal: Vec3D, rng: &mut StdRng) -> Vec3D {
+        let mut total = Color::zero();
+        let n = iff!(light.is_delta_distribution(), 1, self.shadow_rays);
 
-                if cos > 0.0 && !scene.root.is_hit(&ray, dist) {
-                    em * cos
-                } else {
-                    Vec3D::zero()
-                }
-            }
-            &Light::Direction(em, dir) => {
-                let ray = Ray::new(pos, dir);
-                let cos = Vec3D::dot(dir, normal);
+        for _ in 0..n {
+            let (dir, t_max, ill) = light.sample_incidence(pos, normal, rng);
+            let cos = Vec3D::dot(dir, normal);
+            let ray = Ray::new(pos, dir);
 
-                if cos > 0.0 && !scene.root.is_hit(&ray, 1e12) {
-                    em * cos
-                } else {
-                    Vec3D::zero()
-                }
+            if cos > 0.0 && (t_max == 0.0 || !scene.root.is_hit(&ray, t_max)) {
+                total += cos * ill;
             }
         }
+
+        total / n as f32
     }
 }

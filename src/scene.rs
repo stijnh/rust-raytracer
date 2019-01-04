@@ -1,5 +1,6 @@
 use crate::geom::Geometry;
 use crate::math::*;
+use crate::light::Light;
 use crate::texture::{Color, Texture};
 use std::f32::consts::PI;
 use std::sync::Arc;
@@ -7,7 +8,7 @@ use std::sync::Arc;
 pub struct Scene {
     pub root: Arc<dyn Geometry>,
     pub skybox: Arc<dyn Texture>,
-    pub lights: Vec<Light>,
+    pub lights: Vec<Box<dyn Light>>,
     pub camera: Camera,
 }
 
@@ -86,25 +87,5 @@ impl Camera {
         let dir = self.dir + u * self.horizontal + v * self.vertical;
 
         Ray::new(self.pos, dir.normalize())
-    }
-}
-
-pub enum Light {
-    Ambient(Color),
-    Point(Color, Vec3D, f32),
-    Direction(Color, Vec3D),
-}
-
-impl Light {
-    pub fn new_ambient(emission: Vec3D) -> Self {
-        Light::Ambient(emission)
-    }
-
-    pub fn new_point(emission: Vec3D, pos: Vec3D) -> Self {
-        Light::Point(emission, pos, 0.0)
-    }
-
-    pub fn new_directional(emission: Vec3D, dir: Vec3D) -> Self {
-        Light::Direction(emission, dir.normalize())
     }
 }
