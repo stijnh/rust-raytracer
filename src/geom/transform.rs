@@ -12,6 +12,7 @@ pub struct Translate<T> {
 pub struct Scale<T> {
     obj: T,
     scale: f32,
+    inv_scale: f32,
 }
 
 #[derive(PartialEq, Debug)]
@@ -64,7 +65,11 @@ impl<T: Geometry> Geometry for Translate<T> {
 impl<T: Geometry> Scale<T> {
     pub fn new(obj: T, scale: f32) -> Self {
         assert!(scale > 0.0);
-        Self { obj, scale }
+        Self { 
+            obj, 
+            scale,
+            inv_scale: 1.0 / scale
+        }
     }
 
     pub fn scale(self, factor: f32) -> Self {
@@ -75,7 +80,7 @@ impl<T: Geometry> Scale<T> {
 impl<T: Geometry> Geometry for Scale<T> {
     #[inline(always)]
     fn hit(&self, ray: &Ray, t_max: f32) -> Option<HitResult> {
-        let (scale, inv_scale) = (self.scale, 1.0 / self.scale);
+        let (scale, inv_scale) = (self.scale, self.inv_scale);
         let new_ray = Ray::new(ray.pos * inv_scale, ray.dir);
 
         if let Some(mut h) = self.obj.hit(&new_ray, t_max * inv_scale) {
@@ -89,7 +94,7 @@ impl<T: Geometry> Geometry for Scale<T> {
 
     #[inline(always)]
     fn is_hit(&self, ray: &Ray, t_max: f32) -> bool {
-        let inv_scale = 1.0 / self.scale;
+        let inv_scale = self.inv_scale;
         let new_ray = Ray::new(ray.pos * inv_scale, ray.dir);
         self.obj.is_hit(&new_ray, t_max * inv_scale)
     }
