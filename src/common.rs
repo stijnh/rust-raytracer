@@ -33,7 +33,7 @@ macro_rules! max {
     };
     ($a:expr, $($b:expr),*) => {
         match ($a, max!($($b),*)) {
-            (a, b) => if a < b { a } else { b }
+            (a, b) => if a > b { a } else { b }
         }
     }
 }
