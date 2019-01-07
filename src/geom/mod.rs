@@ -3,12 +3,14 @@ mod bvh;
 mod sphere;
 mod transform;
 mod cuboid;
+mod triangle;
 
 pub use self::aggregate::{BoundingBox, GeometryList};
 pub use self::bvh::AABBTree;
 pub use self::sphere::{Sphere, UnitSphere};
 pub use self::transform::{Rotate, Scale, Transform, Translate};
 pub use self::cuboid::{Cuboid, UnitCuboid};
+pub use self::triangle::Triangle;
 use crate::material::Material;
 use crate::math::*;
 use std::ops::Deref;
