@@ -171,7 +171,9 @@ impl<T: Geometry> AABBTree<T> {
     }
 
     pub fn new(objs: Vec<T>, hit_cost: f32) -> Self {
-        Self::with_partition(objs, &partition_sah, hit_cost)
+        let out = Self::with_partition(objs, &partition_sah, hit_cost);
+        out.print_stats();
+        out
     }
 
     pub fn print_stats(&self) {

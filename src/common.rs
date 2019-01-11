@@ -1,8 +1,10 @@
 #[macro_export]
 macro_rules! raise {
     ($x:expr) => {
-        ::std::result::Result::Err($x)?;
-        panic!("unreachable code");
+        ({
+            ::std::result::Result::Err($x)?;
+            panic!("unreachable code")
+        })
     };
     ($x:expr, $msg:expr) => {
         match $msg.into() {

@@ -1,6 +1,6 @@
 use crate::geom::Geometry;
-use crate::math::*;
 use crate::light::Light;
+use crate::math::*;
 use crate::texture::{Color, Texture};
 use std::f32::consts::PI;
 use std::sync::Arc;

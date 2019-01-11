@@ -1,9 +1,9 @@
+use crate::light::Light;
 use crate::math::*;
 use crate::scene::Scene;
-use crate::light::Light;
 use crate::texture::Color;
-use std::f32;
 use rand::prelude::*;
+use std::f32;
 
 pub struct WhittedIntegrator {
     pub max_depth: i32,
@@ -34,7 +34,6 @@ impl WhittedIntegrator {
 
                 let ray = scene.camera.generate_ray(x, y);
                 pixel += self.integrate_recur(scene, &ray, 0, &mut rng);
-
             }
         }
 
@@ -51,7 +50,6 @@ impl WhittedIntegrator {
             None => return scene.calculate_background(ray),
         };
 
-
         let [u, v] = hit.uv;
         let attenuation = hit.material.texture.color_at(u, v);
 
@@ -66,7 +64,14 @@ impl WhittedIntegrator {
         illumination * attenuation
     }
 
-    fn illumination(&self, scene: &Scene, light: &dyn Light, pos: Vec3D, normal: Vec3D, rng: &mut StdRng) -> Vec3D {
+    fn illumination(
+        &self,
+        scene: &Scene,
+        light: &dyn Light,
+        pos: Vec3D,
+        normal: Vec3D,
+        rng: &mut StdRng,
+    ) -> Vec3D {
         let mut total = Color::zero();
         let n = iff!(light.is_delta_distribution(), 1, self.shadow_rays);
 

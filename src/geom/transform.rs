@@ -65,10 +65,10 @@ impl<T: Geometry> Geometry for Translate<T> {
 impl<T: Geometry> Scale<T> {
     pub fn new(obj: T, scale: f32) -> Self {
         assert!(scale > 0.0);
-        Self { 
-            obj, 
+        Self {
+            obj,
             scale,
-            inv_scale: 1.0 / scale
+            inv_scale: 1.0 / scale,
         }
     }
 

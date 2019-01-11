@@ -1,6 +1,6 @@
-use crate::math::*;
-use crate::material::DEFAULT_MATERIAL;
 use crate::geom::{Geometry, HitResult};
+use crate::material::DEFAULT_MATERIAL;
+use crate::math::*;
 
 pub struct UnitCuboid;
 
@@ -16,10 +16,7 @@ fn ray_box_intersection(ray: &Ray, min: Vec3D, max: Vec3D) -> (f32, f32) {
 
 impl Geometry for UnitCuboid {
     fn hit(&self, ray: &Ray, t_max: f32) -> Option<HitResult> {
-        let (t0, t1) = ray_box_intersection(
-            ray,
-            -Vec3D::one(), 
-            Vec3D::one());
+        let (t0, t1) = ray_box_intersection(ray, -Vec3D::one(), Vec3D::one());
 
         let t = if t0 > t1 || t0 > t_max || t1 < 0.0 {
             return None;
@@ -48,21 +45,15 @@ impl Geometry for UnitCuboid {
             material: &DEFAULT_MATERIAL,
         })
     }
-    
+
     fn is_hit(&self, ray: &Ray, t_max: f32) -> bool {
-        let (t0, t1) = ray_box_intersection(
-            ray,
-            -Vec3D::one(), 
-            Vec3D::one());
+        let (t0, t1) = ray_box_intersection(ray, -Vec3D::one(), Vec3D::one());
 
         t0 <= t1 && t0 <= t_max && t1 >= 0.0
     }
 
     fn bounding_box(&self) -> AABB {
-        AABB::from_min_max(
-            -Vec3D::one(),
-            Vec3D::one(),
-        )
+        AABB::from_min_max(-Vec3D::one(), Vec3D::one())
     }
 }
 
@@ -100,18 +91,13 @@ impl Geometry for Cuboid {
     }
 
     fn is_hit(&self, ray: &Ray, t_max: f32) -> bool {
-        let (t0, t1) = ray_box_intersection(
-            ray,
-            self.center - self.extent,
-            self.center + self.extent);
+        let (t0, t1) =
+            ray_box_intersection(ray, self.center - self.extent, self.center + self.extent);
 
         t0 <= t1 && t0 <= t_max && t1 >= 0.0
     }
 
     fn bounding_box(&self) -> AABB {
-        AABB::from_min_max(
-            self.center - self.extent,
-            self.center + self.extent,
-        )
+        AABB::from_min_max(self.center - self.extent, self.center + self.extent)
     }
 }

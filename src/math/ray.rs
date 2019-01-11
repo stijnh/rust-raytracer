@@ -9,8 +9,8 @@ pub struct Ray {
 
 impl Ray {
     pub fn new(pos: Vec3D, dir: Vec3D) -> Self {
-        Self { 
-            pos, 
+        Self {
+            pos,
             dir,
             inv_dir: 1.0 / dir,
         }

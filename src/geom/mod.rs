@@ -1,16 +1,18 @@
 mod aggregate;
 mod bvh;
+mod cuboid;
 mod sphere;
 mod transform;
-mod cuboid;
 mod triangle;
+mod mesh;
 
 pub use self::aggregate::{BoundingBox, GeometryList};
 pub use self::bvh::AABBTree;
+pub use self::cuboid::{Cuboid, UnitCuboid};
 pub use self::sphere::{Sphere, UnitSphere};
 pub use self::transform::{Rotate, Scale, Transform, Translate};
-pub use self::cuboid::{Cuboid, UnitCuboid};
 pub use self::triangle::Triangle;
+pub use self::mesh::Mesh;
 use crate::material::Material;
 use crate::math::*;
 use std::ops::Deref;
