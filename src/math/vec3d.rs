@@ -98,11 +98,16 @@ impl Vec3D {
 
     #[inline(always)]
     pub fn normalize(self) -> Self {
+        self.normalize_safe().unwrap_or(Vec3D::nan())
+    }
+
+    #[inline(always)]
+    pub fn normalize_safe(self) -> Option<Self> {
         let len = self.norm();
         if len > 0.0 {
-            self / Vec3D::fill(len)
+            Some(self / Vec3D::fill(len))
         } else {
-            Vec3D::nan()
+            None
         }
     }
 
