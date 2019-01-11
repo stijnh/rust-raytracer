@@ -124,6 +124,20 @@ impl Vec3D {
             self[0] * that[1] - self[1] * that[0],
         )
     }
+
+    pub fn ortho_axes(&self) -> (Self, Self) {
+        let a = *self;
+        let b = if a[0].abs() > a[1].abs() {
+            let inv_len = 1.0 / (a[0] * a[0] + a[2] * a[2]).sqrt();
+            Self::new(-a[2] * inv_len, 0.0, a[0] * inv_len)
+        } else {
+            let inv_len = 1.0 / (a[1] * a[1] + a[2] * a[2]).sqrt();
+            Self::new(0.0, a[2] * inv_len, -a[1] * inv_len)
+        };
+
+        let c = Self::cross(a, b);
+        (b, c)
+    }
 }
 
 impl std::fmt::Debug for Vec3D {

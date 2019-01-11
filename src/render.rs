@@ -59,9 +59,9 @@ pub fn parallel_render_image(scene: &Scene, integrator: &Integrator) -> RgbImage
         .iter()
         .flat_map(|c| -> ArrayVec<_> {
             [
-                (c[0] * 256.0).max(0.0).min(255.0) as u8,
-                (c[1] * 256.0).max(0.0).min(255.0) as u8,
-                (c[2] * 256.0).max(0.0).min(255.0) as u8,
+                (c[0] * 256.0).floor().max(0.0).min(255.0) as u8,
+                (c[1] * 256.0).floor().max(0.0).min(255.0) as u8,
+                (c[2] * 256.0).floor().max(0.0).min(255.0) as u8,
             ]
             .into()
         })

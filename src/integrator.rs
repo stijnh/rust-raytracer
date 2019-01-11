@@ -5,6 +5,7 @@ use crate::texture::Color;
 use rand::prelude::*;
 use std::f32;
 
+#[derive(Clone, Debug)]
 pub struct WhittedIntegrator {
     pub max_depth: i32,
     pub shadow_rays: i32,
@@ -25,7 +26,13 @@ impl WhittedIntegrator {
     pub fn calculate_pixel(&self, scene: &Scene, cx: usize, cy: usize) -> Color {
         let n = self.antialiasing;
         let mut pixel = Vec3D::zero();
-        let mut rng = StdRng::seed_from_u64(0);
+        let mut rng = StdRng::seed_from_u64((cx.to_le() ^ cy.to_be()) as u64);
+
+
+        //if cx >= 390 && cx <= 400 && cy >= 320 && cy <= 330 {
+        //if (cx, cy) != (395, 325) {
+        //    return Vec3D::zero();
+        //}
 
         for i in 0..n {
             for j in 0..n {
@@ -77,14 +84,17 @@ impl WhittedIntegrator {
 
         for _ in 0..n {
             let (dir, t_max, ill) = light.sample_incidence(pos, normal, rng);
-            let cos = Vec3D::dot(dir, normal);
             let ray = Ray::new(pos, dir);
 
-            if cos > 0.0 && (t_max == 0.0 || !scene.root.is_hit(&ray, t_max)) {
-                total += cos * ill;
+            //println!("{:?} {:?} {:?} {:?}", dir, ill, t_max, Vec3D::dot(dir, normal));
+
+            if t_max == 0.0 || !scene.root.is_hit(&ray, t_max) {
+                total += ill;
             }
         }
 
+        //println!("total={} {:?}", n, total / (n as f32));
+        //println!("");
         total / n as f32
     }
 }

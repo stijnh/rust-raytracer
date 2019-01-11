@@ -53,16 +53,17 @@ impl Light for PointLight {
     fn sample_incidence(
         &self,
         pos: Vec3D,
-        _: Vec3D,
+        normal: Vec3D,
         _rng: &mut StdRng,
     ) -> (Vec3D, f32, Color) {
         let offset = self.pos - pos;
         let dist_sq = offset.norm_squared();
         let dist = dist_sq.sqrt();
         let dir = offset / dist;
+        let cos = Vec3D::dot(dir, normal).max(0.0);
 
         if self.radius == 0.0 {
-            return (dir, dist, self.emission / dist_sq);
+            return (dir, dist, self.emission / dist_sq * cos);
         }
 
         panic!("unreachable");
@@ -92,9 +93,11 @@ impl DirectionLight {
 }
 
 impl Light for DirectionLight {
-    fn sample_incidence(&self, _: Vec3D, _: Vec3D, _rng: &mut StdRng) -> (Vec3D, f32, Color) {
+    fn sample_incidence(&self, _: Vec3D, normal: Vec3D, _rng: &mut StdRng) -> (Vec3D, f32, Color) {
+        let cos = Vec3D::dot(-self.dir, normal).max(0.0);
+
         if self.cos_spread == 1.0 {
-            return (-self.dir, 1e12, self.emission);
+            return (-self.dir, 1e12, self.emission * cos);
         }
 
         panic!("unreachable");
@@ -121,20 +124,21 @@ impl AmbientOcclusion {
 
 impl Light for AmbientOcclusion {
     fn sample_incidence(&self, _: Vec3D, normal: Vec3D, rng: &mut StdRng) -> (Vec3D, f32, Color) {
-        loop {
-            let dir = Vec3D::new(
-                rng.gen_range(-1.0, 1.0),
-                rng.gen_range(-1.0, 1.0),
-                rng.gen_range(-1.0, 1.0),
-            );
+        let theta = rng.gen::<f32>() * 2.0 * std::f32::consts::PI;
+        let u = rng.gen::<f32>();
+        let r = u.sqrt();
 
-            let length_sq = dir.norm_squared();
-            let cos = Vec3D::dot(normal, dir);
+        let x = r * theta.cos();
+        let y = r * theta.sin();
+        let z = (1.0 - u).sqrt();
 
-            if cos > 0.0 && length_sq > 1e-12 && length_sq < 1.0 {
-                let length = length_sq.sqrt();
-                break (dir / length.sqrt(), self.dist, self.emission);
-            }
-        }
+        let (a, b) = normal.ortho_axes();
+        let dir = a * x + b * y + normal * z;
+
+        let f1 = a.dot(b);
+        let f2 = a.dot(normal);
+        let f3 = b.dot(normal);
+
+        (dir, self.dist, self.emission)
     }
 }
