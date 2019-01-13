@@ -19,6 +19,28 @@ pub enum LoadError {
     InvalidFace(String),
 }
 
+fn normalize_type(parts: &[&str]) -> Option<String> {
+    if let [typ] = parts {
+        Some(match *typ {
+            "char" | "int8" => "int8",
+            "uchar" | "uint8" => "uint8",
+            "short" | "int16" => "int16",
+            "ushort" | "uint16" => "uint16",
+            "int" | "int32" => "int32",
+            "uint" | "uint32" => "uint32",
+            "float" | "float32" => "float32",
+            "double" | "float64" => "float64",
+            _ => return None,
+        }.to_string())
+    } else if let ["list", a, b] = parts {
+        Some(format!("list {} {}",
+                normalize_type(&[a])?,
+                normalize_type(&[b])?))
+    } else {
+        None
+    }
+}
+
 struct Reader<'a> {
     lineno: usize,
     buffer: &'a str,
@@ -101,11 +123,14 @@ fn parse_header<'a>(lines: &mut Reader<'a>) -> Result<Vec<Segment>, LoadError> {
             };
 
             let (key, typ) = match rest.split_last() {
-                Some((k, r)) => (k.to_string(), r.join(" ")),
-                None => ("".to_string(), "".to_string()),
+                Some((k, r)) => (*k, r),
+                None => ("", &[] as _),
             };
 
-            props.push((key, typ));
+            let typ = normalize_type(typ)
+                .ok_or_else(|| parse_err(lines, "invalid type"))?;
+
+            props.push((key.to_string(), typ));
         }
 
         segments.push((name, num, props));
@@ -130,9 +155,9 @@ fn parse_vertices(
 
     for (index, (k, v)) in props.iter().enumerate() {
         match (k.as_str(), v.as_str()) {
-            ("x", "float") => xi = index,
-            ("y", "float") => yi = index,
-            ("z", "float") => zi = index,
+            ("x", "float32") => xi = index,
+            ("y", "float32") => yi = index,
+            ("z", "float32") => zi = index,
             (x, _) => {
                 eprintln!("WARN: ignoring vertex property {:?}", x);
             }
@@ -178,7 +203,10 @@ fn parse_faces(
 ) -> Result<Vec<[u32; 3]>, LoadError> {
     let index = props
         .iter()
-        .position(|(a, b)| (a.as_str(), b.as_str()) == ("vertex_indices", "list uchar int"))
+        .position(|(a, b)| {
+            (a == "vertex_indices" || a == "vertex_index") &&
+                (b == "list uint8 int32")
+        })
         .ok_or_else(|| parse_err(lines, "face has not vertex_indices property"))?;
 
     let mut faces = vec![];
