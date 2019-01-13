@@ -54,18 +54,28 @@ impl WhittedIntegrator {
 
         let mut color = Color::zero();
         let [u, v] = hit.uv;
-        let (attenuation, _, _) = hit.material.sample_at(u, v);
+        let n = hit.norm.normalize();
+        let p = hit.pos + n * 0.01;
 
-        if !attenuation.is_zero() {
-            let n = hit.norm.normalize();
-            let p = hit.pos + n * 0.01;
+        let diffuse = hit.material.sample_at(u, v);
+        let scatter = hit.material.scatter(n, ray.dir, rng);
+
+        if !diffuse.is_zero() {
             let mut illumination = Vec3D::zero();
 
             for light in &scene.lights {
                 illumination += self.illumination(scene, &**light, p, n, rng);
             }
 
-            color += illumination * attenuation
+            color += diffuse * illumination;
+        }
+
+        if let Some((out, scatter)) = scatter {
+            color += scatter * self.integrate_recur(
+                scene,
+                &Ray::new(p, out),
+                depth + 1,
+                rng);
         }
 
         color

@@ -38,13 +38,17 @@ pub fn parallel_render(scene: &Scene, integrator: &Integrator) -> Box<[Color]> {
     let elapsed = before.elapsed().unwrap();
     let time = (elapsed.as_secs() as f64) + (elapsed.subsec_nanos() as f64) * 1e-9;
 
+    let minutes = (time / 60.0).floor() as i32;
+    let seconds = (time % 60.0).ceil() as i32;
+
     progress.finish_and_clear();
     println!(
-        "Rendered {}x{}={} pixels in {:.3} sec ({:.3} sec/pixel)",
+        "Rendered {}x{}={} pixels in {:02}:{:02} ({:.3} sec/pixel)",
         width,
         height,
         width * height,
-        time,
+        minutes,
+        seconds,
         time / (width as f64 * height as f64)
     );
 

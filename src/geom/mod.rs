@@ -6,7 +6,7 @@ mod sphere;
 mod transform;
 mod triangle;
 
-pub use self::aggregate::{BoundingBox, GeometryList};
+pub use self::aggregate::{BoundingBox, GeometryList, Object};
 pub use self::bvh::AABBTree;
 pub use self::cuboid::{Cuboid, UnitCuboid};
 pub use self::mesh::Mesh;
