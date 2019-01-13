@@ -44,7 +44,7 @@ impl Camera {
 
         camera
             .look_towards(Vec3D::z_axis(), Vec3D::y_axis())
-            .perspective(100.0)
+            .perspective(60.0)
     }
 
     pub fn position(mut self, pos: Vec3D) -> Self {
