@@ -1,6 +1,7 @@
 use super::{Geometry, HitResult};
 use crate::material::Material;
 use crate::math::*;
+use delegate::*;
 use std::sync::Arc;
 
 pub struct GeometryList<T>(Vec<T>);
@@ -93,25 +94,12 @@ impl<T: Geometry> Geometry for BoundingBox<T> {
     }
 }
 
-pub struct Object {
-    pub geometry: Arc<dyn Geometry>,
-    pub material: Arc<Material>,
+struct ObjectImpl<G, M> {
+    geometry: G,
+    material: M,
 }
 
-impl Object {
-    pub fn new<G, M>(geometry: G, material: M) -> Self
-    where
-        M: Into<Arc<Material>>,
-        G: Into<Arc<dyn Geometry>>,
-    {
-        Object {
-            geometry: geometry.into(),
-            material: material.into(),
-        }
-    }
-}
-
-impl Geometry for Object {
+impl<G: Geometry, M: Material> Geometry for ObjectImpl<G, M> {
     fn hit(&self, ray: &Ray, t_max: f32) -> Option<HitResult> {
         if let Some(mut h) = self.geometry.hit(ray, t_max) {
             h.material = &self.material;
@@ -121,11 +109,39 @@ impl Geometry for Object {
         }
     }
 
-    fn is_hit(&self, ray: &Ray, t_max: f32) -> bool {
-        self.geometry.is_hit(ray, t_max)
+    delegate! {
+        target self.geometry {
+            fn bounding_box(&self) -> AABB;
+            fn is_hit(&self, ray: &Ray, t_max: f32) -> bool;
+        }
+    }
+}
+
+pub struct Object(Box<dyn Geometry>);
+
+impl Object {
+    pub fn new<G>(geom: G) -> Self
+    where
+        G: Geometry + 'static,
+    {
+        Object(Box::new(geom))
     }
 
-    fn bounding_box(&self) -> AABB {
-        self.geometry.bounding_box()
+    pub fn with_material<G, M>(geometry: G, material: M) -> Self
+    where
+        G: Geometry + 'static,
+        M: Material + 'static,
+    {
+        Self::new(ObjectImpl { geometry, material })
+    }
+}
+
+impl Geometry for Object {
+    delegate! {
+        target self.0 {
+            fn bounding_box(&self) -> AABB;
+            fn hit(&self, ray: &Ray, t_max: f32) -> Option<HitResult<'_>>;
+            fn is_hit(&self, ray: &Ray, t_max: f32) -> bool;
+        }
     }
 }

@@ -1,17 +1,17 @@
-use crate::texture::{Texture, COLOR_GREEN};
-use lazy_static::lazy_static;
+use crate::texture::{Texture, Color, COLOR_GREEN, COLOR_BLACK};
+use crate::math::*;
 use std::sync::Arc;
 
-lazy_static! {
-    pub static ref DEFAULT_MATERIAL: Material = {
-        Material {
-            texture: Arc::new(COLOR_GREEN),
-            diffuse: 0.0,
-        }
-    };
+pub static DEFAULT_MATERIAL: NullMaterial = NullMaterial;
+
+pub trait Material: Send + Sync {
+    fn sample_at(&self, u: f32, v: f32) -> (Color, Vec3D, Color);
 }
 
-pub struct Material {
-    pub texture: Arc<dyn Texture>,
-    pub diffuse: f32,
+pub struct NullMaterial;
+
+impl Material for NullMaterial {
+    fn sample_at(&self, u: f32, v: f32) -> (Color, Vec3D, Color) {
+        (COLOR_GREEN, Vec3D::zero(), COLOR_BLACK)
+    }
 }

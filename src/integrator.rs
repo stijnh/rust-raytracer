@@ -2,6 +2,7 @@ use crate::light::Light;
 use crate::math::*;
 use crate::scene::Scene;
 use crate::texture::Color;
+use crate::material::Material;
 use rand::prelude::*;
 use std::f32;
 
@@ -26,13 +27,7 @@ impl WhittedIntegrator {
     pub fn calculate_pixel(&self, scene: &Scene, cx: usize, cy: usize) -> Color {
         let n = self.antialiasing;
         let mut pixel = Vec3D::zero();
-        let mut rng = StdRng::seed_from_u64((cx.to_le() ^ cy.to_be()) as u64);
-
-
-        //if cx >= 390 && cx <= 400 && cy >= 320 && cy <= 330 {
-        //if (cx, cy) != (395, 325) {
-        //    return Vec3D::zero();
-        //}
+        let mut rng = SmallRng::seed_from_u64((cx.to_le() ^ cy.to_be()) as u64);
 
         for i in 0..n {
             for j in 0..n {
@@ -47,7 +42,7 @@ impl WhittedIntegrator {
         (pixel / (n as f32 * n as f32)).map(|x| x.powf(1.0 / self.gamma))
     }
 
-    fn integrate_recur(&self, scene: &Scene, ray: &Ray, depth: i32, rng: &mut StdRng) -> Color {
+    fn integrate_recur(&self, scene: &Scene, ray: &Ray, depth: i32, rng: &mut SmallRng) -> Color {
         if depth >= self.max_depth {
             return scene.calculate_background(ray);
         }
@@ -57,18 +52,23 @@ impl WhittedIntegrator {
             None => return scene.calculate_background(ray),
         };
 
+        let mut color = Color::zero();
         let [u, v] = hit.uv;
-        let attenuation = hit.material.texture.color_at(u, v);
+        let (attenuation, _, _) = hit.material.sample_at(u, v);
 
-        let n = hit.norm.normalize();
-        let p = hit.pos + n * 0.01;
-        let mut illumination = Vec3D::zero();
+        if !attenuation.is_zero() {
+            let n = hit.norm.normalize();
+            let p = hit.pos + n * 0.01;
+            let mut illumination = Vec3D::zero();
 
-        for light in &scene.lights {
-            illumination += self.illumination(scene, &**light, p, n, rng);
+            for light in &scene.lights {
+                illumination += self.illumination(scene, &**light, p, n, rng);
+            }
+
+            color += illumination * attenuation
         }
 
-        illumination * attenuation
+        color
     }
 
     fn illumination(
@@ -77,7 +77,7 @@ impl WhittedIntegrator {
         light: &dyn Light,
         pos: Vec3D,
         normal: Vec3D,
-        rng: &mut StdRng,
+        rng: &mut SmallRng,
     ) -> Vec3D {
         let mut total = Color::zero();
         let n = iff!(light.is_delta_distribution(), 1, self.shadow_rays);

@@ -3,7 +3,7 @@ use crate::texture::Color;
 use rand::prelude::*;
 
 pub trait Light: Send + Sync {
-    fn sample_incidence(&self, pos: Vec3D, norm: Vec3D, rng: &mut StdRng) -> (Vec3D, f32, Color);
+    fn sample_incidence(&self, pos: Vec3D, norm: Vec3D, rng: &mut SmallRng) -> (Vec3D, f32, Color);
     fn is_delta_distribution(&self) -> bool {
         false
     }
@@ -22,7 +22,7 @@ impl AmbientLight {
 }
 
 impl Light for AmbientLight {
-    fn sample_incidence(&self, _: Vec3D, normal: Vec3D, _: &mut StdRng) -> (Vec3D, f32, Color) {
+    fn sample_incidence(&self, _: Vec3D, normal: Vec3D, _: &mut SmallRng) -> (Vec3D, f32, Color) {
         (normal, 0.0, self.emission)
     }
 
@@ -54,7 +54,7 @@ impl Light for PointLight {
         &self,
         pos: Vec3D,
         normal: Vec3D,
-        _rng: &mut StdRng,
+        _rng: &mut SmallRng,
     ) -> (Vec3D, f32, Color) {
         let offset = self.pos - pos;
         let dist_sq = offset.norm_squared();
@@ -93,7 +93,12 @@ impl DirectionLight {
 }
 
 impl Light for DirectionLight {
-    fn sample_incidence(&self, _: Vec3D, normal: Vec3D, _rng: &mut StdRng) -> (Vec3D, f32, Color) {
+    fn sample_incidence(
+        &self,
+        _: Vec3D,
+        normal: Vec3D,
+        _rng: &mut SmallRng,
+    ) -> (Vec3D, f32, Color) {
         let cos = Vec3D::dot(-self.dir, normal).max(0.0);
 
         if self.cos_spread == 1.0 {
@@ -123,7 +128,7 @@ impl AmbientOcclusion {
 }
 
 impl Light for AmbientOcclusion {
-    fn sample_incidence(&self, _: Vec3D, normal: Vec3D, rng: &mut StdRng) -> (Vec3D, f32, Color) {
+    fn sample_incidence(&self, _: Vec3D, normal: Vec3D, rng: &mut SmallRng) -> (Vec3D, f32, Color) {
         let theta = rng.gen::<f32>() * 2.0 * std::f32::consts::PI;
         let u = rng.gen::<f32>();
         let r = u.sqrt();
@@ -134,10 +139,6 @@ impl Light for AmbientOcclusion {
 
         let (a, b) = normal.ortho_axes();
         let dir = a * x + b * y + normal * z;
-
-        let f1 = a.dot(b);
-        let f2 = a.dot(normal);
-        let f3 = b.dot(normal);
 
         (dir, self.dist, self.emission)
     }

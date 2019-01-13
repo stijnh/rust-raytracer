@@ -1,18 +1,18 @@
 mod aggregate;
 mod bvh;
 mod cuboid;
+mod mesh;
 mod sphere;
 mod transform;
 mod triangle;
-mod mesh;
 
 pub use self::aggregate::{BoundingBox, GeometryList};
 pub use self::bvh::AABBTree;
 pub use self::cuboid::{Cuboid, UnitCuboid};
+pub use self::mesh::Mesh;
 pub use self::sphere::{Sphere, UnitSphere};
 pub use self::transform::{Rotate, Scale, Transform, Translate};
 pub use self::triangle::Triangle;
-pub use self::mesh::Mesh;
 use crate::material::Material;
 use crate::math::*;
 use std::ops::Deref;
@@ -22,7 +22,7 @@ pub struct HitResult<'a> {
     pub norm: Vec3D,
     pub t: f32,
     pub uv: [f32; 2],
-    pub material: &'a Material,
+    pub material: &'a (dyn Material + 'a),
 }
 
 pub trait Geometry: Send + Sync {
