@@ -12,8 +12,8 @@ mod render;
 mod scene;
 mod texture;
 
-use crate::math::*;
 use crate::geom::*;
+use crate::math::*;
 use crate::texture::*;
 use std::sync::Arc;
 
@@ -31,7 +31,6 @@ pub fn main() {
         vec3d(5.0, 5.0, bb.min[2] - 1.0),
     );
 
-
     list.push(Box::new(mesh));
     list.push(Box::new(cube));
 
@@ -40,7 +39,7 @@ pub fn main() {
     integrator.antialiasing = 4;
     integrator.shadow_rays = 20;
 
-    let pos = Vec3D::new(-2.5, -3.0, 3.0);
+    let pos = Vec3D::new(-6.0, -6.0, 3.0);
     let up = -Vec3D::z_axis();
     let focus = Vec3D::new(-0.0, -0.0, 0.0);
     let cam = scene::Camera::new(800, 600)
@@ -60,17 +59,13 @@ pub fn main() {
             10.0,
         )),
         */
-        Box::new(
-            light::DirectionLight::new(
-                vec3d(-2.5, -3.0, -3.0),
-                0.0,
-                COLOR_WHITE,
-                0.5)
-        ),
-
-        Box::new(
-            light::AmbientOcclusion::new(0.3, Vec3D::one(), 0.5)
-        ),
+        Box::new(light::DirectionLight::new(
+            vec3d(-2.5, -3.0, -3.0),
+            0.0,
+            COLOR_WHITE,
+            0.5,
+        )),
+        Box::new(light::AmbientOcclusion::new(1e12, Vec3D::one(), 0.5)),
         //scene::Light::new_directional(Vec3D::fill(0.45), vec3d(1.0, 1.0, 1.0)),
         //scene::Light::new_directional(Vec3D::fill(0.45), vec3d(-1.0, 1.0, 1.0)),
     ];
@@ -82,11 +77,10 @@ pub fn main() {
         lights,
     };
 
-
     for i in 1..10 {
         let mut fast_integrator = integrator.clone();
         fast_integrator.shadow_rays = i * 10;
-        fast_integrator.antialiasing = 1;
+        fast_integrator.antialiasing = i;
         println!("{:?}", fast_integrator);
         let img = render::parallel_render_image(&scene, &fast_integrator);
         img.save(&format!("test_{}.png", i)).unwrap();

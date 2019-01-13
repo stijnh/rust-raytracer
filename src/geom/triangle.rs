@@ -42,10 +42,7 @@ impl Geometry for Triangle {
         let [t, u, v] = moller_trumbore([self.a, self.b, self.c], ray);
 
         if t >= 0.0 && t <= t_max && u >= 0.0 && v >= 0.0 && u + v <= 1.0 {
-            let norm = Vec3D::cross(
-                self.b - self.a,
-                self.c - self.a,
-            );
+            let norm = Vec3D::cross(self.b - self.a, self.c - self.a);
 
             Some(HitResult {
                 t,

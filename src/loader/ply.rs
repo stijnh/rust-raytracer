@@ -203,10 +203,13 @@ fn parse_faces(
                 .map_err(|_| parse_err(lines, "failed to parse integer"))?;
 
             if x as usize >= num_vertices {
-                raise!(parse_err(lines, &format!(
-                    "invalid vertex identifier {}, only {} vertices",
-                    x,
-                    num_vertices)));
+                raise!(parse_err(
+                    lines,
+                    &format!(
+                        "invalid vertex identifier {}, only {} vertices",
+                        x, num_vertices
+                    )
+                ));
             }
 
             indices.push(x);

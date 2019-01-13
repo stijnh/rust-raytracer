@@ -1,12 +1,12 @@
-use crate::math::*;
-use crate::geom::{AABBTree, Triangle, Geometry, HitResult};
 use crate::geom::triangle::moller_trumbore;
+use crate::geom::{AABBTree, Geometry, HitResult, Triangle};
 use crate::material::DEFAULT_MATERIAL;
+use crate::math::*;
+use crunchy::unroll;
 use delegate::*;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::mem::transmute;
-use crunchy::unroll;
+use std::sync::Arc;
 
 struct MeshTriangle {
     vertices: [u32; 3],
@@ -40,11 +40,9 @@ impl Mesh {
 
         let tris = faces
             .into_iter()
-            .map(move |[a, b, c]| {
-                MeshTriangle {
-                    vertices: [a, b, c],
-                    data: data.clone(),
-                }
+            .map(move |[a, b, c]| MeshTriangle {
+                vertices: [a, b, c],
+                data: data.clone(),
             })
             .collect::<Vec<_>>();
 
@@ -59,9 +57,9 @@ impl Mesh {
 
         for &[i, j, k] in &faces {
             let [a, b, c] = [
-                vertices[i as usize], 
-                vertices[j as usize], 
-                vertices[k as usize]
+                vertices[i as usize],
+                vertices[j as usize],
+                vertices[k as usize],
             ];
 
             let e1 = b - a;
@@ -138,7 +136,7 @@ impl Geometry for MeshTriangle {
 
             Some(HitResult {
                 t,
-                norm, 
+                norm,
                 pos: ray.at(t),
                 material: &DEFAULT_MATERIAL,
                 uv: [u, v],
@@ -155,9 +153,7 @@ impl Geometry for MeshTriangle {
         let b = unsafe { *data.get_unchecked(j as usize) };
         let c = unsafe { *data.get_unchecked(k as usize) };
 
-        AABB::from_point(a)
-            .union_point(b)
-            .union_point(c)
+        AABB::from_point(a).union_point(b).union_point(c)
     }
 }
 
