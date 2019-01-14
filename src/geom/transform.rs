@@ -2,26 +2,26 @@ use super::{Geometry, HitResult};
 use crate::math::*;
 use crunchy::unroll;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Translate<T> {
     obj: T,
     offset: Vec3D,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Scale<T> {
     obj: T,
     scale: f32,
     inv_scale: f32,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Rotate<T> {
     obj: T,
     mat: Mat3D,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Transform<T> {
     obj: Translate<Scale<Rotate<T>>>,
 }
@@ -33,6 +33,18 @@ impl<T: Geometry> Translate<T> {
 
     pub fn translate(self, offset: Vec3D) -> Self {
         Self::new(self.obj, self.offset + offset)
+    }
+
+    pub fn translate_x(self, d: f32) -> Self {
+        self.translate(Vec3D::new(d, 0.0, 0.0))
+    }
+
+    pub fn translate_y(self, d: f32) -> Self {
+        self.translate(Vec3D::new(0.0, d, 0.0))
+    }
+
+    pub fn translate_z(self, d: f32) -> Self {
+        self.translate(Vec3D::new(0.0, 0.0, d))
     }
 }
 
@@ -212,6 +224,18 @@ impl<T: Geometry> Transform<T> {
     pub fn translate(mut self, offset: Vec3D) -> Self {
         self.obj = self.obj.translate(offset);
         self
+    }
+
+    pub fn translate_x(self, d: f32) -> Self {
+        self.translate(Vec3D::x_axis() * d)
+    }
+
+    pub fn translate_y(self, d: f32) -> Self {
+        self.translate(Vec3D::y_axis() * d)
+    }
+
+    pub fn translate_z(self, d: f32) -> Self {
+        self.translate(Vec3D::z_axis() * d)
     }
 
     pub fn scale(mut self, scale: f32) -> Self {
