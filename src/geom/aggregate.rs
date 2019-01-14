@@ -4,6 +4,7 @@ use crate::math::*;
 use delegate::*;
 use std::sync::Arc;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct GeometryList<T>(Vec<T>);
 
 impl<T: Geometry> GeometryList<T> {
@@ -55,6 +56,7 @@ impl<T: Geometry> Geometry for GeometryList<T> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct BoundingBox<T>(T, AABB);
 
 impl<T: Geometry> BoundingBox<T> {

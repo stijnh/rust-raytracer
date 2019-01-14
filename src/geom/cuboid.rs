@@ -2,6 +2,7 @@ use crate::geom::{Geometry, HitResult};
 use crate::material::DEFAULT_MATERIAL;
 use crate::math::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct UnitCuboid;
 
 fn ray_box_intersection(ray: &Ray, min: Vec3D, max: Vec3D) -> (f32, f32) {
@@ -57,6 +58,7 @@ impl Geometry for UnitCuboid {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Cuboid {
     center: Vec3D,
     extent: Vec3D,

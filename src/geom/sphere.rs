@@ -3,10 +3,10 @@ use crate::material::DEFAULT_MATERIAL;
 use crate::math::*;
 use std::f32::consts::PI;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct UnitSphere;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Sphere {
     obj: Translate<Scale<UnitSphere>>,
 }

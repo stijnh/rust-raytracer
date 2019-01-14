@@ -2,7 +2,7 @@ use super::{Geometry, HitResult};
 use crate::material::DEFAULT_MATERIAL;
 use crate::math::*;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Triangle {
     pub a: Vec3D,
     pub b: Vec3D,
