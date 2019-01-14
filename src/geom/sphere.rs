@@ -14,7 +14,7 @@ pub struct Sphere {
 impl Sphere {
     pub fn new(center: Vec3D, radius: f32) -> Self {
         Self {
-            obj: Translate::new(Scale::new(UnitSphere, radius), center),
+            obj: Translate::with(Scale::with(UnitSphere, radius), center),
         }
     }
 }
@@ -36,12 +36,12 @@ impl Geometry for UnitSphere {
     fn hit(&self, ray: &Ray, t_max: f32) -> Option<HitResult> {
         let (t0, t1) = sphere_intersect(ray)?;
 
-        let t = if t0 > t_max || t1 < 0.0 {
-            return None;
-        } else if t0 >= 0.0 {
+        let t = if t0 >= 0.0 && t0 <= t_max {
             t0
-        } else {
+        } else if t1 >= 0.0 && t1 <= t_max {
             t1
+        } else {
+            return None;
         };
 
         let pos = ray.at(t);

@@ -27,12 +27,16 @@ pub struct Transform<T> {
 }
 
 impl<T: Geometry> Translate<T> {
-    pub fn new(obj: T, offset: Vec3D) -> Self {
+    pub fn new(obj: T) -> Self {
+        Self::with(obj, Vec3D::zero())
+    }
+
+    pub fn with(obj: T, offset: Vec3D) -> Self {
         Translate { obj, offset }
     }
 
     pub fn translate(self, offset: Vec3D) -> Self {
-        Self::new(self.obj, self.offset + offset)
+        Self::with(self.obj, self.offset + offset)
     }
 
     pub fn translate_x(self, d: f32) -> Self {
@@ -75,7 +79,11 @@ impl<T: Geometry> Geometry for Translate<T> {
 }
 
 impl<T: Geometry> Scale<T> {
-    pub fn new(obj: T, scale: f32) -> Self {
+    pub fn new(obj: T) -> Self {
+        Self::with(obj, 1.0)
+    }
+
+    pub fn with(obj: T, scale: f32) -> Self {
         assert!(scale > 0.0);
         Self {
             obj,
@@ -85,7 +93,7 @@ impl<T: Geometry> Scale<T> {
     }
 
     pub fn scale(self, factor: f32) -> Self {
-        Self::new(self.obj, self.scale * factor)
+        Self::with(self.obj, self.scale * factor)
     }
 }
 
@@ -215,8 +223,8 @@ impl<T: Geometry> Geometry for Rotate<T> {
 impl<T: Geometry> Transform<T> {
     pub fn new(obj: T) -> Self {
         let obj = Rotate::new(obj);
-        let obj = Scale::new(obj, 1.0);
-        let obj = Translate::new(obj, Vec3D::zero());
+        let obj = Scale::new(obj);
+        let obj = Translate::new(obj);
 
         Self { obj }
     }
