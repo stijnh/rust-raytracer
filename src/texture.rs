@@ -70,8 +70,8 @@ impl Image {
 impl Texture for Image {
     fn color_at(&self, u: f32, v: f32) -> Color {
         let (w, h) = self.0.dimensions();
-        let x = (u * w as f32) as u32;
-        let y = (v * h as f32) as u32;
+        let x = (u * w as f32).min(w as f32 - 1.0).max(0.0) as u32;
+        let y = (v * h as f32).min(h as f32 - 1.0).max(0.0) as u32;
         let p = self.0.get_pixel(x, y);
 
         Color::new(
