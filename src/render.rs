@@ -17,6 +17,7 @@ pub fn parallel_render(scene: &Scene, integrator: &Integrator) -> Box<[Color]> {
         .progress_chars("\u{2588}\u{2592}\u{2591}");
     let progress = ProgressBar::new((width * height) as u64);
     progress.set_style(style);
+    progress.enable_steady_tick(1000);
     let progress_ref = &progress;
 
     let before = SystemTime::now();
