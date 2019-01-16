@@ -25,21 +25,29 @@ impl Material for NullMaterial {
 pub struct Metal;
 
 impl Material for Metal {
+    fn sample_at(&self, u: f32, v: f32) -> Color {
+        COLOR_BLACK
+    }
+
     fn scatter(&self, n: Vec3D, i: Vec3D, _: &mut SmallRng) -> Option<(Vec3D, Color)> {
         let out = i - 2.0 * n * Vec3D::dot(n, i);
         Some((out, COLOR_WHITE))
     }
 }
 
-pub struct Glossy(pub f32);
+pub struct Glossy<T: Texture>(pub f32, pub f32, pub T);
 
-impl Material for Glossy {
+impl <T: Texture> Material for Glossy<T> {
+    fn sample_at(&self, u: f32, v: f32) -> Color {
+        self.2.color_at(u, v) * (1.0 - self.1)
+    }
+
     fn scatter(&self, n: Vec3D, i: Vec3D, rng: &mut SmallRng) -> Option<(Vec3D, Color)> {
         let out = i - 2.0 * n * Vec3D::dot(n, i);
         let (a, b) = out.ortho_axes();
         let side = iff!(Vec3D::dot(n, i) < 0.0, 1.0, -1.0);
 
-        loop {
+        for _ in 0..10 {
             let theta = rng.gen::<f32>() * 2.0 * std::f32::consts::PI;
             let u = rng.gen::<f32>();
 
@@ -53,9 +61,11 @@ impl Material for Glossy {
             let o = x * a + y * b + z * out;
 
             if Vec3D::dot(n, out) * side > 0.0 {
-                break Some((o, COLOR_WHITE));
+                return Some((o, COLOR_WHITE * self.1));
             }
         }
+
+        None
     }
 }
 
@@ -68,7 +78,7 @@ impl Material for Glass {
 }
 
 
-pub struct Transparent(f32);
+pub struct Transparent(pub f32);
 
 impl Material for Transparent {
     fn scatter(&self, normal: Vec3D, i: Vec3D, rng: &mut SmallRng) -> Option<(Vec3D, Color)> {
