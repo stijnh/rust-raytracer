@@ -39,8 +39,6 @@ pub struct PointLight {
 
 impl PointLight {
     pub fn new(pos: Vec3D, radius: f32, color: Color, intensity: f32) -> Self {
-        assert_eq!(radius, 0.0);
-
         PointLight {
             pos,
             radius,
@@ -54,19 +52,25 @@ impl Light for PointLight {
         &self,
         pos: Vec3D,
         normal: Vec3D,
-        _rng: &mut SmallRng,
+        rng: &mut SmallRng,
     ) -> (Vec3D, f32, Color) {
-        let offset = self.pos - pos;
+        let offset = loop {
+            let f = Vec3D::new(
+                rng.gen_range(-1.0, 1.0),
+                rng.gen_range(-1.0, 1.0),
+                rng.gen_range(-1.0, 1.0));
+
+            if f.norm_squared() < 1.0 { 
+                break self.pos + f * self.radius - pos;
+            }
+        };
+
         let dist_sq = offset.norm_squared();
         let dist = dist_sq.sqrt();
         let dir = offset / dist;
         let cos = Vec3D::dot(dir, normal).max(0.0);
 
-        if self.radius == 0.0 {
-            return (dir, dist, self.emission / dist_sq * cos);
-        }
-
-        panic!("unreachable");
+        return (dir, dist, self.emission / dist_sq * cos);
     }
 
     fn is_delta_distribution(&self) -> bool {
@@ -76,17 +80,15 @@ impl Light for PointLight {
 
 pub struct DirectionLight {
     dir: Vec3D,
-    cos_spread: f32,
+    spread: f32,
     emission: Color,
 }
 
 impl DirectionLight {
     pub fn new(dir: Vec3D, spread: f32, color: Color, intensity: f32) -> Self {
-        assert_eq!(spread, 0.0);
-
         DirectionLight {
             dir: dir.normalize(),
-            cos_spread: spread.cos(),
+            spread,
             emission: color * intensity,
         }
     }
@@ -97,19 +99,31 @@ impl Light for DirectionLight {
         &self,
         _: Vec3D,
         normal: Vec3D,
-        _rng: &mut SmallRng,
+        rng: &mut SmallRng,
     ) -> (Vec3D, f32, Color) {
-        let cos = Vec3D::dot(-self.dir, normal).max(0.0);
+        let o = if self.spread != 0.0 {
+            let theta = rng.gen::<f32>() * 2.0 * std::f32::consts::PI;
+            let u = rng.gen::<f32>();
 
-        if self.cos_spread == 1.0 {
-            return (-self.dir, 1e12, self.emission * cos);
-        }
+            let p = u.powf(self.spread);
+            let r = (1.0 - p).sqrt();
 
-        panic!("unreachable");
+            let x = r * theta.cos();
+            let y = r * theta.sin();
+            let z = p.sqrt();
+
+            let (a, b) = self.dir.ortho_axes();
+            x * a + y * b - z * self.dir
+        } else {
+            -self.dir
+        };
+
+        let cos = Vec3D::dot(o, normal).max(0.0);
+        (o, 1e12, self.emission * cos)
     }
 
     fn is_delta_distribution(&self) -> bool {
-        self.cos_spread == 1.0
+        self.spread == 1.0
     }
 }
 
