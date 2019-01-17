@@ -43,7 +43,7 @@ impl <T: Texture> Material for Glossy<T> {
     }
 
     fn scatter(&self, n: Vec3D, i: Vec3D, rng: &mut SmallRng) -> Option<(Vec3D, Color)> {
-        let out = i - 2.0 * n * Vec3D::dot(n, i);
+        let out = reflection(n, i);
         let (a, b) = out.ortho_axes();
         let side = iff!(Vec3D::dot(n, i) < 0.0, 1.0, -1.0);
 
@@ -80,21 +80,52 @@ impl Material for Glass {
 
 pub struct Transparent(pub f32);
 
+pub fn reflection(normal: Vec3D, i: Vec3D) -> Vec3D {
+    i - 2.0 * normal * Vec3D::dot(normal, i)
+}
+
+pub fn refraction(normal: Vec3D, i: Vec3D, ior: f32) -> Option<Vec3D> {
+    let side = Vec3D::dot(normal, i);
+    let (cosi, eta, n) = if side < 0.0 {
+        (-side, 1.0 / ior, normal)
+    } else {
+        (side, ior, -normal)
+    };
+
+    let k = 1.0 - eta * eta * (1.0 - cosi * cosi);
+    if k > 0.0 {
+        Some(eta * i + (eta * cosi - k.sqrt()) * n)
+    } else {
+        None
+    }
+}
+
+pub fn fresnel(normal: Vec3D, i: Vec3D, ior: f32) -> f32 {
+    let side = Vec3D::dot(normal, i);
+    let (cosi, etat, etai) = if side < 0.0 {
+        (-side, ior, 1.0)
+    } else {
+        (side, 1.0, ior)
+    };
+
+    let sint = etai / etat * (1.0 - cosi * cosi).sqrt();
+
+    if sint < 1.0 {
+        let cost = (1.0 - sint * sint).sqrt();
+        let rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
+        let rp = ((etat * cosi) - (etai * cost)) / ((etai * cosi) + (etat * cost));
+        (rs * rs + rp * rp) / 2.0
+    } else {
+        1.0
+    }
+}
+
 impl Material for Transparent {
     fn scatter(&self, normal: Vec3D, i: Vec3D, rng: &mut SmallRng) -> Option<(Vec3D, Color)> {
-        let side = Vec3D::dot(normal, i);
-        let (c, eta, n) = if side < 0.0 {
-            (-side, 1.0 / self.0, normal)
+        let o = if rng.gen::<f32>() < fresnel(normal, i, self.0) {
+            reflection(normal, i)
         } else {
-            (side, self.0, -normal)
-        };
-
-        let k = 1.0 - eta * eta * (1.0 - c * c);
-
-        let o = if k > 0.0 {
-            eta * i + (eta * c - k.sqrt()) * n
-        } else {
-            i - 2.0 * n * Vec3D::dot(n, i)
+            refraction(normal, i, self.0)?
         };
 
         Some((o, COLOR_WHITE))
