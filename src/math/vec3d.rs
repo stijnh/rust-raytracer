@@ -98,7 +98,7 @@ impl Vec3D {
 
     #[inline(always)]
     pub fn normalize(self) -> Self {
-        self.normalize_safe().unwrap_or(Vec3D::nan())
+        self.normalize_safe().unwrap_or_else(Vec3D::nan)
     }
 
     #[inline(always)]

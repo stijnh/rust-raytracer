@@ -206,7 +206,7 @@ impl<T: Geometry> Geometry for Rotate<T> {
         unroll! {
             for i in 0..8 {
                 let p = Vec3D::new(
-                    corners[(i / 1) % 2][0],
+                    corners[i % 2][0],
                     corners[(i / 2) % 2][1],
                     corners[(i / 4) % 2][2],
                 );

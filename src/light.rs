@@ -70,7 +70,7 @@ impl Light for PointLight {
         let dir = offset / dist;
         let cos = Vec3D::dot(dir, normal).max(0.0);
 
-        return (dir, dist, self.emission / dist_sq * cos);
+        (dir, dist, self.emission / dist_sq * cos)
     }
 
     fn is_delta_distribution(&self) -> bool {
@@ -80,7 +80,7 @@ impl Light for PointLight {
 
 pub struct DirectionLight {
     dir: Vec3D,
-    spread: f32,
+    spread: Option<f32>,
     emission: Color,
 }
 
@@ -88,7 +88,7 @@ impl DirectionLight {
     pub fn new(dir: Vec3D, spread: f32, color: Color, intensity: f32) -> Self {
         DirectionLight {
             dir: dir.normalize(),
-            spread,
+            spread: iff!(spread > 0.0, Some(spread), None),
             emission: color * intensity,
         }
     }
@@ -101,11 +101,11 @@ impl Light for DirectionLight {
         normal: Vec3D,
         rng: &mut SmallRng,
     ) -> (Vec3D, f32, Color) {
-        let o = if self.spread != 0.0 {
+        let o = if let Some(spread) = self.spread {
             let theta = rng.gen::<f32>() * 2.0 * std::f32::consts::PI;
             let u = rng.gen::<f32>();
 
-            let p = u.powf(self.spread);
+            let p = u.powf(spread);
             let r = (1.0 - p).sqrt();
 
             let x = r * theta.cos();
@@ -123,7 +123,7 @@ impl Light for DirectionLight {
     }
 
     fn is_delta_distribution(&self) -> bool {
-        self.spread == 1.0
+        self.spread.is_some()
     }
 }
 

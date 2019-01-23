@@ -82,11 +82,11 @@ fn parse_err(reader: &Reader, msg: &str) -> LoadError {
 }
 
 fn parse_header<'a>(lines: &mut Reader<'a>) -> Result<Vec<Segment>, LoadError> {
-    if lines.next() != &["ply"] {
+    if lines.next() != ["ply"] {
         raise!(parse_err(lines, "expecting 'ply'"));
     }
 
-    if lines.next() != &["format", "ascii", "1.0"] {
+    if lines.next() != ["format", "ascii", "1.0"] {
         raise!(parse_err(lines, "expected 'format ascii 1.0'"));
     }
 
@@ -105,7 +105,7 @@ fn parse_header<'a>(lines: &mut Reader<'a>) -> Result<Vec<Segment>, LoadError> {
             _ => break,
         }
 
-        let name = line.get(1).unwrap().to_string();
+        let name = line.get(0).unwrap_or(&"").to_string();
         let num = line
             .get(2)
             .unwrap_or(&&"")
@@ -136,7 +136,7 @@ fn parse_header<'a>(lines: &mut Reader<'a>) -> Result<Vec<Segment>, LoadError> {
         segments.push((name, num, props));
     }
 
-    if lines.current() != &["end_header"] {
+    if lines.current() != ["end_header"] {
         raise!(parse_err(lines, "expected 'end_header'"));
     }
 

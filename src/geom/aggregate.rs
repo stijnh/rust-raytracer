@@ -2,7 +2,6 @@ use super::{Geometry, HitResult};
 use crate::material::Material;
 use crate::math::*;
 use delegate::*;
-use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GeometryList<T>(Vec<T>);

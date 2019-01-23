@@ -58,7 +58,7 @@ impl Geometry for Triangle {
 
     fn is_hit(&self, ray: &Ray, t_max: f32) -> bool {
         let [t, u, v] = moller_trumbore([self.a, self.b, self.c], ray);
-        return t >= 0.0 && t <= t_max && u >= 0.0 && v >= 0.0 && u + v <= 1.0;
+        t >= 0.0 && t <= t_max && u >= 0.0 && v >= 0.0 && u + v <= 1.0
     }
 
     fn bounding_box(&self) -> AABB {

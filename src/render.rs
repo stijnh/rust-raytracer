@@ -5,7 +5,6 @@ use arrayvec::ArrayVec;
 use image::RgbImage;
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
-use std::sync::Mutex;
 use std::time::SystemTime;
 
 pub fn parallel_render(scene: &Scene, integrator: &Integrator) -> Box<[Color]> {

@@ -31,7 +31,7 @@ impl WhittedIntegrator {
     }
 
     pub fn calculate_pixel(&self, scene: &Scene, cx: usize, cy: usize) -> Color {
-        let mut n = self.antialiasing;
+        let n = self.antialiasing;
         let mut pixels = vec![];
         let mut rng = SmallRng::seed_from_u64((cx.to_le() ^ cy.to_be()) as u64);
         self.dd.store(0, SeqCst);

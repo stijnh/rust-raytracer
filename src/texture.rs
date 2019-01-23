@@ -75,9 +75,9 @@ impl Texture for Image {
         let p = self.0.get_pixel(x, y);
 
         Color::new(
-            p[0] as f32 / 255.0,
-            p[1] as f32 / 255.0,
-            p[2] as f32 / 255.0,
+            f32::from(p[0]) / 255.0,
+            f32::from(p[1]) / 255.0,
+            f32::from(p[2]) / 255.0,
         )
     }
 }

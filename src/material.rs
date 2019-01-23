@@ -25,7 +25,7 @@ impl Material for NullMaterial {
 pub struct Metal;
 
 impl Material for Metal {
-    fn sample_at(&self, u: f32, v: f32) -> Color {
+    fn sample_at(&self, _u: f32, _v: f32) -> Color {
         COLOR_BLACK
     }
 
